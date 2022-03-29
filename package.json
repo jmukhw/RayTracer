@@ -1,0 +1,29 @@
+{
+  "name": "raytracer",
+  "version": "0.0.1",
+  "description": "Simple javascript ray tracing library",
+  "main": "main.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.[t|j]sx?$": "babel-jest"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmukhw/RayTracer.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jmukhw/RayTracer/issues"
+  },
+  "homepage": "https://github.com/jmukhw/RayTracer#readme",
+  "devDependencies": {
+    "@babel/preset-env": "^7.16.11",
+    "babel-jest": "^27.5.1",
+    "jest": "^27.5.1"
+  }
+}

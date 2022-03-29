@@ -1,0 +1,3 @@
+**/node_modules
+Babel.config.json
+**/__tests__
