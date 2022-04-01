@@ -1,6 +1,7 @@
 export {Vector}
+import { Touple } from "./Touple.js";
 
-class Vector {
+class Vector extends Touple{
     /**
      * 4-dimensional vector with x, y, z components and w set to 0.
      * @param {number} x
@@ -8,9 +9,7 @@ class Vector {
      * @param {number} z
      */
     constructor(x = 0, y = 0, z = 0) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.w = 0;
+        super(x,y,z,0);
+        Object.defineProperty(this, 'w', {value: 0, writable: false});
     }
 }
