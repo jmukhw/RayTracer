@@ -1,7 +1,30 @@
-export {Equal, ScalarsEqual, Add, Subtract, Negate, ScalarMultiply, MultiplyColors, ScalarDivide, Magnitude, Normalize, Dot, Cross}
+export {Equal, 
+    ScalarsEqual, 
+    Add, 
+    Subtract, 
+    Negate, 
+    ScalarMultiply,
+    MatrixMultiply, 
+    MultiplyColors, 
+    ScalarDivide,
+    Magnitude, 
+    Normalize, 
+    Dot, 
+    Cross,
+    Get4x4IdentityMatrix,
+    MatrixTranspose,
+    MatrixDeterminant,
+    Submatrix,
+    MatrixMinor,
+    MatrixCofactor,
+    IsInvertable,
+    MatrixInvert}
+
 import { Touple } from "../Types/Touple.js"
 import { Vector } from "../Types/Vector.js";
+import { Point } from "../Types/Point.js";
 import { Color } from "../Types/Color.js"
+import { Matrix } from "../Types/Matrix.js"
 
 // epsilon is the acceptable difference between two equal numbers
 let epsilon = .0001;
@@ -24,11 +47,19 @@ function Equal(A, B) {
         if (Math.abs(A.r-B.r) < epsilon &
             Math.abs(A.g-B.g) < epsilon &
             Math.abs(A.b-B.b) < epsilon) {
-        return true
+            return true
+        }
+    } else if (A instanceof Matrix & B instanceof Matrix) {
+        if (A.rows == B.rows & A.cols == B.cols) {
+            for (let i = 0; i < A.values.length; i++) {
+                if (!ScalarsEqual(A.values[i], B.values[i])) return false;
+            }
+            return true;
+        } else return false;
+
     }
-    return false;
-    }
-    throw Error("Equal called with at least one object that was not an instance of {Touple}");
+    
+    throw Error("Equal called with at least one object that was not an instance of {Touple}: A " + typeof A + " B " + typeof B + " A " + A instanceof Matrix +  " B " + B instanceof Matrix );
 }
 /**
  * Test if two scalars are approximately equal
@@ -185,4 +216,190 @@ function MultiplyColors(A, B) {
     throw Error("Cross called with at least one object that was not an instance of {Touple}");
 }
 
+/**
+ * Multiply two matrices or a matrix and a touple. Returns a touple if one of the inputs is a
+ * touple, otherwise returns a matrix.
+ * @param {Matrix|Touple} A
+ * @param {Matrix|Touple} B
+ * @return {Matrix|Touple}
+ */
+ function MatrixMultiply(A, B) {
+    let returnTouple = false;
+    let D;
+    if (A instanceof Touple & B instanceof Matrix) {
+        if (B.rows != 4) throw Error("Matrix Multiply Error: Different number of columns in A (4) and rows in B (" + B.rows + ")");
+        D = A;
+        A = new Matrix(1,4,[A.x, A.y, A.z, A.w]);
+        returnTouple = true;
+    } else if (B instanceof Touple & A instanceof Matrix) {
+        if (A.cols != 4) throw Error("Matrix Multiply Error: Different number of columns in A (" + A.cols + ") and rows in B (4)");
+        D = B;
+        B = new Matrix(4,1,[B.x, B.y, B.z, B.w]);
+        returnTouple = true;
+    }
+    if (A instanceof Matrix & B instanceof Matrix) {
+        if (A.cols != B.rows) throw Error("Matrix Multiply Error: Different number of columns in A (" + A.cols + ") and rows in B (" + B.rows + ")");
+        let rows = A.rows;
+        let cols = B.cols;
+        let C = new Matrix(rows, cols);
 
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+                let v = 0;
+                for (let k = 0; k < A.cols; k++) {
+                    v += A.values[i*A.cols+k] * B.values[j+B.cols*k]
+                }
+                C.values[i*cols+j] = v;
+            }
+        }
+        if (returnTouple){
+          if (D instanceof Point) return new Point(C.values[0], C.values[1], C.values[2])
+          if (D instanceof Vector) return new Vector(C.values[0], C.values[1], C.values[2])
+          return new Touple(C.values[0], C.values[1], C.values[2], C.values[3])
+        } 
+        return C;
+    }
+    throw Error("Matrix multiply called with at least one object that was not an instance of {Matrix}");
+}
+
+/**
+ * Returns a 4x4 identity matrix
+ * @return {Matrix}
+ */
+function Get4x4IdentityMatrix() {
+    return new Matrix(4,4,
+        [1,0,0,0,
+         0,1,0,0,
+         0,0,1,0,
+         0,0,0,1]);
+}
+
+
+/**
+ * Returns the transpose of a matrix
+ * @param {Matrix} A
+ * @return {Matrix}
+ */
+function MatrixTranspose(A) {
+    if (A instanceof Matrix) {
+        let B = new Matrix(A.cols, A.rows);
+        
+        for (let i = 0; i < A.rows; i++) {
+            for (let j = 0; j < A.cols; j++) {
+                B.values[j*A.cols+i] = A.values[i*A.cols+j];
+            }
+        }
+        return B;
+    }
+    throw Error("MatrixTranspose called with argument other than Matrix: " + A)
+}
+
+/**
+ * Returns the determinant of a square matrix
+ * @param {Matrix} A
+ * @return {number}
+ */
+ function MatrixDeterminant(A) {
+    if (A instanceof Matrix) {
+        if (A.cols == 2 & A.rows == 2) {
+            return A.values[0]*A.values[3]-A.values[1]*A.values[2];
+        }
+        let det = 0;
+        for (let j = 0; j < A.cols; j++) {
+            det += A.values[j] * MatrixCofactor(A, 0, j)
+        }
+        return det;
+    } 
+    throw Error("MatrixDeterminant called with argument other than Matrix: " + A)
+}
+
+/**
+ * Returns a new matrix that is a submatrix of a given matrix i.e., one specified row and column removed
+ * @param {Matrix} A
+ * @param {number} row
+ * @param {number} col
+ * @return {Matrix}
+ */
+ function Submatrix(A, row, col) {
+    if (A instanceof Matrix & A.cols >= col & A.rows >= row) {
+        let B = new Matrix(A.rows-1, A.cols-1);
+        for (let i = 0; i < A.rows; i++) {
+            for (let j = 0; j < A.cols; j++) {
+                if (i != row & j != col) {
+                    let newRow = i < row ? i : i-1;
+                    let newCol = j < col ? j : j-1;
+                    B.values[newRow * B.cols + newCol] = A.values[i*A.cols+j];
+                }
+            }
+        }
+        return B;
+    } 
+    throw Error("Submatrix called with argument other than Matrix, or specified row/column exceeded size of matrix: " + A + " row: " + row + " col: " + col)
+}
+
+/**
+ * Returns the minor of a 3x3 matrix at (i, j) which is the determinant of the submatrix at that point
+ * @param {Matrix} A
+ * @param {number} row
+ * @param {number} col
+ * @return {number}
+ */
+ function MatrixMinor(A, row, col) {
+    if (A instanceof Matrix & A.cols >= col & A.rows >= row) {
+        let B = Submatrix(A, row, col);
+        return MatrixDeterminant(B);
+    } 
+    throw Error("MatrixMinor called with argument other than Matrix, or specified row/column exceeded size of matrix: " + A + " row: " + row + " col: " + col)
+}
+
+/**
+ * Returns cofactor a 3x3 matrix at (i, j) which is the determinant of the minor at that point with the sign adjusted depending on its position
+ * @param {Matrix} A
+ * @param {number} row
+ * @param {number} col
+ * @return {number}
+ */
+ function MatrixCofactor(A, row, col) {
+    if (A instanceof Matrix & A.cols >= col & A.rows >= row) {
+        let det = MatrixMinor(A, row, col);
+        return (row + col)%2==1 ? -det : det;
+    } 
+    throw Error("MatrixCofactor called with argument other than Matrix, or specified row/column exceeded size of matrix: " + A + " row: " + row + " col: " + col)
+}
+
+/**
+ * Tests if a matrix is invertable ie determinant is not zero
+ * @param {Matrix} A
+ * @return {boolean}
+ */
+function IsInvertable(A) {
+    if (A instanceof Matrix) {
+        let det = MatrixDeterminant(A);
+        if (det == 0) return false
+        return true;
+    } 
+    throw Error("IsInvertable called with argument other than Matrix: " + A );
+}
+
+
+/**
+ * Inverts a matrix
+ * @param {Matrix} A
+ * @return {Matrix}
+ */
+ function MatrixInvert(A) {
+    if (A instanceof Matrix) {
+        let det = MatrixDeterminant(A);
+        if (det == 0) throw Error("MatrixInvert: matrix could not be inverted (zero determinant) [" + A.rows + "x" + A.cols + "] " + A.values);
+        let B = new Matrix(A.rows, A.cols);
+
+        for (let i = 0; i < A.rows; i++) {
+            for (let j = 0; j < A.cols; j++) {
+                let c = MatrixCofactor(A,i,j);
+                B.values[j*A.cols+i] = c/det; //note transpose by switching i and j
+            }
+        }
+        return B;
+    } 
+    throw Error("MatrixCofactor called with argument other than Matrix, or specified row/column exceeded size of matrix: " + A + " row: " + row + " col: " + col)
+}

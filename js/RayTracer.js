@@ -14,7 +14,7 @@ class RayTracer {
      * @param {HTMLElement} HTMLCanvas
      */
     constructor(HTMLCanvas) {
-        this.canvas = new Canvas(HTMLCanvas, 0, 0, 50, true);
+        this.canvas = new Canvas(HTMLCanvas, 0, 0, 10, true);
     }
     draw() {
         var c = new Color(225,188,57);
