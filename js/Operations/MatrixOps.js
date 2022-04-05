@@ -1,4 +1,4 @@
-export {Equal, 
+export {Equals, 
     ScalarsEqual, 
     Add, 
     Subtract, 
@@ -21,10 +21,10 @@ export {Equal,
     MatrixInvert}
 
 import { Touple } from "../Types/Touple.js"
-import { Vector } from "../Types/Vector.js";
-import { Point } from "../Types/Point.js";
 import { Color } from "../Types/Color.js"
 import { Matrix } from "../Types/Matrix.js"
+import { Point } from "../Types/Point.js"
+import { Vector } from "../Types/Vector.js"
 
 // epsilon is the acceptable difference between two equal numbers
 let epsilon = .0001;
@@ -34,7 +34,7 @@ let epsilon = .0001;
  * @param {(Touple|Color|Matrix)} B
  * @return {boolean}
  */
-function Equal(A, B) {
+function Equals(A, B) {
     if (A instanceof Touple & B instanceof Touple) {
         if (Math.abs(A.x-B.x) < epsilon &
             Math.abs(A.y-B.y) < epsilon &

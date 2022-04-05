@@ -1,4 +1,7 @@
 export { Touple }
+//import * as mo from "../Operations/MatrixOps.js"
+import {Equals}  from "../Operations/MatrixOps.js"
+//import * as mt from "../Operations/MatrixTrans"
 
 class Touple {
     /**
@@ -14,4 +17,13 @@ class Touple {
         this.z = z;
         this.w = w;
     }
+    /**
+     * Test if this touple is approximately equal to another matrix or touple
+     * @param {(Touple|Matrix)} A
+     * @return {boolean}
+     */
+    Equals(A) {
+        return Equals(this, A);
+    }
+
 }

@@ -1,5 +1,7 @@
 export {Vector}
 import { Touple } from "./Touple.js";
+import * as mo from "../Operations/MatrixOps.js"
+import * as mt from "../Operations/MatrixTrans"
 
 class Vector extends Touple{
     /**
