@@ -87,4 +87,62 @@ class Matrix {
     Invert() {
         return mo.MatrixInvert(this);
     }
+    /**
+     * Returns this object postmultiplied by a 4x4 transformation matrix representing the translation by delta x, y, z
+     * @param {number} dx
+     * @param {number} dy
+     * @param {number} dz
+     * @return {Matrix}
+     */
+    Translate(dx, dy, dz) {
+        return mo.MatrixMultiply(this, mt.Translation(dx, dy, dz));
+    }
+    /**
+     * Returns this postmultiplied by a 4x4 transformation matrix to scale x, y, z
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     * @return {Matrix}
+     */
+    Scale(x, y, z) {
+        return mo.MatrixMultiply(this, mt.Scaling(x, y, z));
+    }
+    /**
+     * Returns this postmultiplied by a 4x4 transformation matrix representing a rotation around the x axis by a specified number of radians
+     * @param {number} rads
+     * @return {Matrix}
+     */
+    Rotate_x(rads) {
+        return mo.MatrixMultiply(this, mt.Rotation_x(rads));
+    }
+    /**
+     * Returns this postmultiplied by a 4x4 transformation matrix representing a rotation around the y axis by a specified number of radians
+     * @param {number} rads
+     * @return {Matrix}
+     */
+    Rotate_y(rads) {
+        return mo.MatrixMultiply(this, mt.Rotation_y(rads));
+    }
+    /**
+    * Returns this postmultiplied by a 4x4 transformation matrix representing a rotation around the z axis by a specified number of radians
+    * @param {number} rads
+    * @return {Matrix}
+    */
+    Rotate_z(rads) {
+        return mo.MatrixMultiply(this, mt.Rotation_z(rads));
+    }
+
+    /**
+     * Returns this postmultiplied by a 4x4 transformation matrix representing a shear in which x, y, z are transformed in proportion to each other e.g., xy = 2 adds to a given x by 2*y
+     * @param {number} xy
+     * @param {number} xz
+     * @param {number} yx
+     * @param {number} yz
+     * @param {number} zx
+     * @param {number} zy
+     * @return {Matrix}
+     */
+    Shear(xy, xz, yx, yz, zx, zy) {
+        return mo.MatrixMultiply(this,mt.Shearing(xy, xz, yx, yz, zx, zy));
+    }
 }

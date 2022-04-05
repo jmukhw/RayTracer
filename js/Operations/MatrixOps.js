@@ -20,11 +20,9 @@ export {Equals,
     IsInvertable,
     MatrixInvert}
 
-import { Touple } from "../Types/Touple.js"
+import { Touple, Point, Vector } from "../Types/Touple.js"
 import { Color } from "../Types/Color.js"
 import { Matrix } from "../Types/Matrix.js"
-import { Point } from "../Types/Point.js"
-import { Vector } from "../Types/Vector.js"
 
 // epsilon is the acceptable difference between two equal numbers
 let epsilon = .0001;
@@ -127,7 +125,11 @@ function Add(A, B) {
  * @return {(Touple|Color|Matrix)}
  */
  function ScalarMultiply(a, B) {
-    if (typeof(a) == 'number' & B instanceof Touple) {
+    if (typeof(a) == 'number' & B instanceof Point) {
+        return new Point(B.x*a, B.y*a, B.z*a);
+    } else if (typeof(a) == 'number' & B instanceof Vector) {
+        return new Vector(B.x*a, B.y*a, B.z*a);
+    } else if (typeof(a) == 'number' & B instanceof Touple) {
         return new Touple(B.x*a, B.y*a, B.z*a, B.w*a);
     } else if (typeof(a) == 'number' & B instanceof Color) {
         return new Color(B.r*a, B.g*a, B.b*a);
@@ -253,8 +255,8 @@ function MultiplyColors(A, B) {
             }
         }
         if (returnTouple){
-          if (D instanceof Point) return new Point(C.values[0], C.values[1], C.values[2])
-          if (D instanceof Vector) return new Vector(C.values[0], C.values[1], C.values[2])
+          if (D.constructor.name == 'Point') return new Point(C.values[0], C.values[1], C.values[2])
+          if (D.constructor.name == 'Vector') return new Vector(C.values[0], C.values[1], C.values[2])
           return new Touple(C.values[0], C.values[1], C.values[2], C.values[3])
         } 
         return C;
