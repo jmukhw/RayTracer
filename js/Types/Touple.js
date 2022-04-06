@@ -1,6 +1,7 @@
-export { Touple, Vector, Point }
+export { Touple, Vector, Point, Ray }
 import * as mo from "../Operations/MatrixOps.js"
 import * as mt from "../Operations/MatrixTrans.js"
+import * as int from "../Operations/Intersections.js"
 
 class Touple {
     /**
@@ -67,6 +68,41 @@ class Touple {
         throw Error("Divide called with non-scalar input");
     }
     /**
+     * Magnitude of this
+     * @return {number}
+     */
+    Magnitude() {
+        return mo.Magnitude(this);
+    }
+
+    /**
+     * Normalize this
+     * @return {Touple}
+     */
+    Normalize() {
+        mo.Normalize(this);
+    }
+
+    /**
+     * Dot product of this dot B
+     * @param {Touple} B
+     * @return {number}
+     */
+    Dot(B) {
+        return mo.Dot(this, B);
+    }
+
+    /**
+     * Cross product of this with cross vector B
+     * If Touples or points are passed, the w component will be discarded.
+     * @param {Vector} B
+     * @return {Vector}
+     */
+    Cross(B) {
+        return mo.Cross(this, B);
+    }
+
+    /**
      * Returns this object multiplied by a 4x4 transformation matrix representing the translation by delta x, y, z
      * @param {number} dx
      * @param {number} dy
@@ -122,7 +158,7 @@ class Touple {
      * @return {Matrix}
      */
     Shear(xy, xz, yx, yz, zx, zy) {
-        return mo.MatrixMultiply(mt.Shearing(xy,xz,yx,yz,zx,zy), this);
+        return mo.MatrixMultiply(mt.Shearing(xy, xz, yx, yz, zx, zy), this);
     }
 }
 
@@ -150,5 +186,35 @@ class Point extends Touple {
     constructor(x = 0, y = 0, z = 0) {
         super(x, y, z, 1);
         Object.defineProperty(this, 'w', { value: 1, writable: false });
+    }
+}
+
+class Ray {
+    /**
+     * Ray with a point and vector
+     * @param {(Point|Touple)} origin
+     * @param {(Vector|Touple)} direction
+     */
+    constructor(origin, direction) {
+        this.o = origin;
+        this.d = direction;
+    }
+    /**
+     * Compute the point at a given distance t along a ray
+     * @param {number} t
+     * @return {Point}
+     */
+    Position(t) {
+        return int.Position(this, t);
+    }
+    /**
+     * Compute intersection points between a ray and a sphere. Returns [] if no collisions, 
+     * or an array with 2 elements if there are one or two collisions. The elements are the distance
+     * along the ray that the collisions occured.
+     * @param {Sphere} s
+     * @return {number[]}
+     */
+    Intersect(s) {
+        return int.Intersect(this, s);
     }
 }

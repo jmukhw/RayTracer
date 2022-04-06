@@ -82,6 +82,30 @@ class Canvas {
         }
     }
     /**
+     * Set a pixel at (x, y) with red, green, blue, alpha values (0-255, inclusive), with the
+     * origin in the top-left corner and the y-axis inverted
+     * @param {number} x
+     * @param {number} y
+     * @param {number} w
+     * @param {number} h
+     * @param {Color} color
+     */
+    setPixelRect(x,y,w,h,color) {
+        x = Math.round(x);
+        y = Math.round(y);
+
+        for (let i = x; i < x+w; i++) {
+            for (let j = y; j < y+h; j++) {
+                var pos = Math.round(j) * this.width + Math.round(i);
+                if (pos >= 0 & pos * 4 + 2 < this.pixels.length) {
+                    this.pixels[pos * 4 + 0] = color.r;
+                    this.pixels[pos * 4 + 1] = color.g;
+                    this.pixels[pos * 4 + 2] = color.b;
+                }
+            }
+        }
+    }
+    /**
      * Get a pixel at (x, y) with red, green, blue, alpha values (0-255, inclusive), with the
      * origin in the top-left corner and the y-axis inverted
      * @param {number} x
@@ -107,5 +131,22 @@ class Canvas {
             }
         }
         this.update();
+    }
+    drawLine(p0, p1, w=3, res=40) {
+        let v = p1.Subtract(p0);
+        let zmin = -300;
+        let zmax = 300;
+        for (let i = 0; i < res; i++) {
+            let p2 = p0.Translate(v.x/res*i, v.y/res*i, v.z/res*i);
+            let zcol = this.remap(p0.z,0,1,zmin, zmax);
+            let c = new Color();
+            c.r = Math.max(80,zcol*200+50);
+            c.g = Math.max(80,zcol*200+50);
+            c.b = Math.max(80,zcol*200+50);
+            this.setPixelRect(p2.x, p2.y, Math.max(1,zcol*w), Math.max(1,zcol*w), c);
+        }
+    }
+    remap(x, newMin, newMax, oldMin, oldMax) {
+        return ((x-oldMin)/(oldMax-oldMin))*(newMax-newMin)+newMin
     }
 }
