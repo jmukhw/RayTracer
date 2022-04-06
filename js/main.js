@@ -1,6 +1,11 @@
 import { RayTracer } from "./RayTracer.js";
-
+var rt;
 window.onload = function () {
-    var rt = new RayTracer(document.getElementById("canvas"));
-    rt.draw();
+    rt = new RayTracer(document.getElementById("canvas"));
+    window.requestAnimationFrame(step);
+}
+
+function step(t) {
+    rt.draw(t);
+    window.requestAnimationFrame(step);
 }

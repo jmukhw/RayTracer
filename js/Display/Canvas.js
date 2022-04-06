@@ -27,17 +27,19 @@ class Canvas {
         canvas.height = height * scale;
 
         this.ctx = canvas.getContext("2d");
+        this.imageData = this.ctx.getImageData(0,0,this.width, this.height);
 
-        this.pixels = this.ctx.createImageData(width, height);
+        this.pixels = [];//this.ctx.createImageData(width, height);
+        this.pixels.length = this.width * this.height;
 
         for (var x = 0; x < width; x++) {
             for (var y = 0; y < height; y++) {
                 var pos = y * this.width + x;
 
-                this.pixels[pos * 4 + 0] = 0; //r
+                this.pixels[pos * 4 + 0] = 255; //r
                 this.pixels[pos * 4 + 1] = 0; //g
                 this.pixels[pos * 4 + 2] = 0; //b
-                this.pixels[pos * 4 + 3] = 1;// a
+                this.pixels[pos * 4 + 3] = 255;// a
             }
         }
         this.update();
@@ -46,7 +48,9 @@ class Canvas {
      * Redraw the pixel buffer to the canvas
      */
     update() {
-        let width = this.width;
+        this.imageData.data.set(new Uint8ClampedArray(this.pixels));
+        this.ctx.putImageData(this.imageData,0,0);
+        /*let width = this.width;
         let height = this.height;
         let scale = this.scale;
         for (var x = 0; x < width; x++) {
@@ -60,7 +64,7 @@ class Canvas {
 
                 this.ctx.fillRect(x * scale, y * scale, scale, scale);
             }
-        }
+        }*/
     }
     /**
      * Set a pixel at (x, y) with red, green, blue, alpha values (0-255, inclusive), with the
@@ -70,12 +74,12 @@ class Canvas {
      * @param {Color} color
      */
     setPixel(x, y, color) {
-        var pos = y * this.width + x;
-        this.pixels[pos * 4 + 0] = color.r;
-        this.pixels[pos * 4 + 1] = color.g;
-        this.pixels[pos * 4 + 2] = color.b;
-
-        this.update();
+        var pos = Math.round(y) * this.width + Math.round(x);
+        if (pos >= 0 & pos * 4 + 2 < this.pixels.length) {
+            this.pixels[pos * 4 + 0] = color.r;
+            this.pixels[pos * 4 + 1] = color.g;
+            this.pixels[pos * 4 + 2] = color.b;
+        }
     }
     /**
      * Get a pixel at (x, y) with red, green, blue, alpha values (0-255, inclusive), with the
@@ -90,5 +94,18 @@ class Canvas {
         color.g = this.pixels[pos * 4 + 1];
         color.b = this.pixels[pos * 4 + 2];
         return color;
+    }
+    clearCanvas(color) {
+        for (var x = 0; x < this.width; x++) {
+            for (var y = 0; y < this.height; y++) {
+                var pos = y * this.width + x;
+
+                this.pixels[pos * 4 + 0] = color.r; //r
+                this.pixels[pos * 4 + 1] = color.g; //g
+                this.pixels[pos * 4 + 2] = color.b; //b
+                this.pixels[pos * 4 + 3] = 255;// a
+            }
+        }
+        this.update();
     }
 }

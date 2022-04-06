@@ -1,6 +1,6 @@
 export { Matrix }
 import * as mo from "../Operations/MatrixOps.js"
-import * as mt from "../Operations/MatrixTrans"
+import * as mt from "../Operations/MatrixTrans.js"
 
 class Matrix {
     /**
