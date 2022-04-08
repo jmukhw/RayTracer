@@ -29,19 +29,11 @@ class Canvas {
         this.ctx = canvas.getContext("2d");
         this.imageData = this.ctx.getImageData(0,0,this.width, this.height);
 
-        this.pixels = [];//this.ctx.createImageData(width, height);
-        this.pixels.length = this.width * this.height;
+        this.frames = [];
+        this.currentFrame = 0;
 
-        for (var x = 0; x < width; x++) {
-            for (var y = 0; y < height; y++) {
-                var pos = y * this.width + x;
+        this.startNewFrame();
 
-                this.pixels[pos * 4 + 0] = 255; //r
-                this.pixels[pos * 4 + 1] = 0; //g
-                this.pixels[pos * 4 + 2] = 0; //b
-                this.pixels[pos * 4 + 3] = 255;// a
-            }
-        }
         this.update();
     }
     /**
@@ -51,20 +43,35 @@ class Canvas {
         this.imageData.data.set(new Uint8ClampedArray(this.pixels));
         this.ctx.putImageData(this.imageData,0,0);
     }
+    displayCurrentFrame() {
+        this.imageData.data.set(new Uint8ClampedArray(this.frames[this.currentFrame]));
+        this.ctx.putImageData(this.imageData,0,0);
+    }
+    nextFrame() {
+        if (this.currentFrame >= this.frames.length) this.currentFrame = 0;
+        else this.currentFrame++;
+    }
     startNewFrame() {
         this.pixels = [];//this.ctx.createImageData(width, height);
         this.pixels.length = this.width * this.height;
 
-        for (var x = 0; x < width; x++) {
-            for (var y = 0; y < height; y++) {
+        for (var x = 0; x < this.width; x++) {
+            for (var y = 0; y < this.height; y++) {
                 var pos = y * this.width + x;
 
-                this.pixels[pos * 4 + 0] = 255; //r
+                this.pixels[pos * 4 + 0] = 0; //r
                 this.pixels[pos * 4 + 1] = 0; //g
                 this.pixels[pos * 4 + 2] = 0; //b
                 this.pixels[pos * 4 + 3] = 255;// a
             }
         }
+    }
+    saveFrame() {
+        let a = [];
+        for (let i = 0; i < this.pixels.length; i++) {
+            a[i] = this.pixels[i];
+        }
+        this.frames.push(a);
     }
     /**
      * Set a pixel at (x, y) with red, green, blue, alpha values (0-255, inclusive), with the

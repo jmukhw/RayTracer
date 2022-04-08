@@ -19,10 +19,19 @@ class RayTracer {
         this.startTime = undefined;
         this.canvas.clearCanvas(new Color(0, 0, 0));
         this.animate = true;
+        for (let i = 0; i < 1; i++) {
+            this.drawSphere(i*100);
+        }
     }
     draw(t) {
+        if (this.startTime == undefined) this.startTime = t;
+        if (t-this.startTime < 30) {
+            return;
+        }
+        this.startTime = t;
         if (this.animate) {
-            this.drawSphere(t);
+            this.canvas.nextFrame();
+            this.canvas.displayCurrentFrame();
             this.animate = true;
         }
     }
@@ -122,6 +131,7 @@ class RayTracer {
         this.canvas.update();
     }
     drawSphere(t) {
+        this.canvas.startNewFrame();
         //let m = mt.Translation(0, 0, Math.sin(t / 5000) * 1.5).Rotate_x(t / 1000).Shear(1.5, 0, 0, 0, 0, 0).Scale(2, 2, 2);
         let m = mt.Rotation_x(t/1000).Shear(1.5, 0,0,0,0,0).Scale(2,2,2);
         //let m = mo.Get4x4IdentityMatrix().Scale(2,2,2).Shear(.4, 0,0,0,0,0);
@@ -131,11 +141,11 @@ class RayTracer {
         let d = new Vector(0, 0, 1);
         let dmag = 1;
 
-        let n = 75;
+        let n = 500;
         let fov = (120 / 360) * 2 * Math.PI;
 
-        let w = 2;
-        let h = 2;
+        let w = 1;
+        let h = 1;
 
         let bgColor = new Color(12, 14, 25);
         let sphereColor = new Color(67, 160, 75);
@@ -146,8 +156,8 @@ class RayTracer {
                 let xrot = (fov / n) * (i - n / 2);
                 let yrot = (fov / n) * (j - n / 2);
 
-                let passes = 1;
-                let range = .005;
+                let passes = 20;
+                let range = .025;
 
                 for (let k = 0; k < passes; k++) {
                     let r = new Ray(o.Add(new Vector((Math.random()+Math.random() - 1) * range, (Math.random()+Math.random() - 1) * range, (Math.random()+Math.random() - 1) * range)), d.Rotate_x(xrot).Rotate_y(yrot));
@@ -166,7 +176,7 @@ class RayTracer {
                 this.canvas.setPixelRect(i * w, j * h, w, h, c);
             }
         }
-        this.canvas.update();
+        this.canvas.saveFrame();
 
     }
 
