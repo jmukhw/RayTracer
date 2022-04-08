@@ -50,21 +50,21 @@ class Canvas {
     update() {
         this.imageData.data.set(new Uint8ClampedArray(this.pixels));
         this.ctx.putImageData(this.imageData,0,0);
-        /*let width = this.width;
-        let height = this.height;
-        let scale = this.scale;
+    }
+    startNewFrame() {
+        this.pixels = [];//this.ctx.createImageData(width, height);
+        this.pixels.length = this.width * this.height;
+
         for (var x = 0; x < width; x++) {
             for (var y = 0; y < height; y++) {
-                var pos = y * width + x;
+                var pos = y * this.width + x;
 
-                this.ctx.fillStyle = 'rgba(' + this.pixels[pos * 4 + 0]
-                    + ',' + this.pixels[pos * 4 + 1]
-                    + ',' + this.pixels[pos * 4 + 2]
-                    + ',' + this.pixels[pos * 4 + 3] + ')';
-
-                this.ctx.fillRect(x * scale, y * scale, scale, scale);
+                this.pixels[pos * 4 + 0] = 255; //r
+                this.pixels[pos * 4 + 1] = 0; //g
+                this.pixels[pos * 4 + 2] = 0; //b
+                this.pixels[pos * 4 + 3] = 255;// a
             }
-        }*/
+        }
     }
     /**
      * Set a pixel at (x, y) with red, green, blue, alpha values (0-255, inclusive), with the
@@ -132,17 +132,18 @@ class Canvas {
         }
         this.update();
     }
-    drawLine(p0, p1, w=3, res=40) {
+    drawLine(p0, p1, w=10, res=40) {
         let v = p1.Subtract(p0);
-        let zmin = -300;
-        let zmax = 300;
+        let zmin = -200;
+        let zmax = 200;
         for (let i = 0; i < res; i++) {
             let p2 = p0.Translate(v.x/res*i, v.y/res*i, v.z/res*i);
-            let zcol = this.remap(p0.z,0,1,zmin, zmax);
+            
+            let zcol = this.remap(p2.z,0,1,zmin, zmax);
             let c = new Color();
-            c.r = Math.max(80,zcol*200+50);
-            c.g = Math.max(80,zcol*200+50);
-            c.b = Math.max(80,zcol*200+50);
+            c.r = Math.max(20,zcol*200);
+            c.g = Math.max(20,zcol*200);
+            c.b = Math.max(20,zcol*200);
             this.setPixelRect(p2.x, p2.y, Math.max(1,zcol*w), Math.max(1,zcol*w), c);
         }
     }

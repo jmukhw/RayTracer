@@ -1,4 +1,4 @@
-export { Touple, Vector, Point, Ray }
+export { Touple, Vector, Point, Ray, Intersection }
 import * as mo from "../Operations/MatrixOps.js"
 import * as mt from "../Operations/MatrixTrans.js"
 import * as int from "../Operations/Intersections.js"
@@ -49,12 +49,22 @@ class Touple {
         return mo.Negate(this);
     }
     /**
-     * Multiply this Touple by another matrix, touple, or scalar. Returns a touple if one of the inputs is a
+     * Premultiply this Touple by another matrix, touple, or scalar. Returns a touple if one of the inputs is a
      * touple, otherwise returns a matrix.
      * @param {Matrix|Touple|number} A
      * @return {Matrix|Touple}
      */
-    Multiply(A) {
+    Premultiply(A) {
+        if (typeof (A) == 'number') return mo.ScalarMultiply(A, this);
+        return mo.MatrixMultiply(A, this);
+    }
+    /**
+     * Postmultiply this Touple by another matrix, touple, or scalar. Returns a touple if one of the inputs is a
+     * touple, otherwise returns a matrix.
+     * @param {Matrix|Touple|number} A
+     * @return {Matrix|Touple}
+     */
+    Postmultiply(A) {
         if (typeof (A) == 'number') return mo.ScalarMultiply(A, this);
         return mo.MatrixMultiply(this, A);
     }
@@ -212,9 +222,29 @@ class Ray {
      * or an array with 2 elements if there are one or two collisions. The elements are the distance
      * along the ray that the collisions occured.
      * @param {Sphere} s
-     * @return {number[]}
+     * @return {Intersection[]}
      */
     Intersect(s) {
         return int.Intersect(this, s);
+    }
+    /**
+     * Apply a 4x4 tranformation matrix to this ray
+     * @param {Matrix} m
+     * @return {Ray}
+     */
+    Transform(m) {
+        return mo.TransformRay(this, m);
+    }
+}
+
+class Intersection {
+    /**
+     * Intersection between a ray and an object
+     * @param {number} t
+     * @param {Sphere} object
+     */
+    constructor(t, object) {
+        this.t = t;
+        this.object = object;
     }
 }

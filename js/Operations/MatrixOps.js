@@ -18,9 +18,10 @@ export {Equals,
     MatrixMinor,
     MatrixCofactor,
     IsInvertable,
-    MatrixInvert}
+    MatrixInvert,
+    TransformRay}
 
-import { Touple, Point, Vector } from "../Types/Touple.js"
+import { Touple, Point, Vector, Ray } from "../Types/Touple.js"
 import { Color } from "../Types/Color.js"
 import { Matrix } from "../Types/Matrix.js"
 
@@ -405,3 +406,14 @@ function IsInvertable(A) {
     } 
     throw Error("MatrixCofactor called with argument other than Matrix, or specified row/column exceeded size of matrix: " + A + " row: " + row + " col: " + col)
 }
+
+/**
+ * Apply a 4x4 tranformation matrix to a ray
+ * @param {Ray} r
+ * @param {Matrix} m
+ * @return {Ray}
+ */
+ function TransformRay(r, m) {
+    return new Ray(r.o.Premultiply(m), r.d.Premultiply(m));
+}
+ 
