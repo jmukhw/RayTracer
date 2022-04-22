@@ -19,11 +19,13 @@ export {Equals,
     MatrixCofactor,
     IsInvertable,
     MatrixInvert,
-    TransformRay}
+    TransformRay,
+    Smoothstep}
 
 import { Touple, Point, Vector, Ray } from "../Types/Touple.js"
 import { Color } from "../Types/Color.js"
 import { Matrix } from "../Types/Matrix.js"
+import { Translation } from "./MatrixTrans.js"
 
 // epsilon is the acceptable difference between two equal numbers
 let epsilon = .0001;
@@ -48,6 +50,7 @@ function Equals(A, B) {
             Math.abs(A.b-B.b) < epsilon) {
             return true
         }
+        return false;
     } else if (A instanceof Matrix & B instanceof Matrix) {
         if (A.rows == B.rows & A.cols == B.cols) {
             for (let i = 0; i < A.values.length; i++) {
@@ -183,6 +186,10 @@ function MultiplyColors(A, B) {
  * @return {Touple}
  */
  function Normalize(A) {
+    if (A instanceof Vector) {
+        let m = Magnitude(A);
+        return new Vector(A.x/m, A.y/m, A.z/m);
+    }
     if (A instanceof Touple) {
         let m = Magnitude(A);
         return new Touple(A.x/m, A.y/m, A.z/m, A.w/m);
@@ -417,3 +424,17 @@ function IsInvertable(A) {
     return new Ray(r.o.Premultiply(m), r.d.Premultiply(m));
 }
  
+
+/**
+ * Remap x between min and max using an Hermite polynomial, return 0 if less than edge0 or 1 if less than edge1
+ * @param {number} x
+ * @param {number} edge0
+ * @param {number} edge1
+ * @return {number}
+ */
+ function Smoothstep(x, edge0, edge1) {
+    if (x < edge0) return 0;
+    if (x > edge1) return 1;
+    return x*x*(3-2*x);
+}
+

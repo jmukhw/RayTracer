@@ -1,7 +1,10 @@
-export { Touple, Vector, Point, Ray, Intersection }
+export { Touple, Vector, Point, Ray, Intersection, World, IntersectionComputations }
 import * as mo from "../Operations/MatrixOps.js"
+import * as so from "../Operations/ShapeOps.js"
 import * as mt from "../Operations/MatrixTrans.js"
 import * as int from "../Operations/Intersections.js"
+import { Material, PointLight, Sphere } from "./Shapes.js";
+import { Color } from "./Color.js";
 
 class Touple {
     /**
@@ -90,7 +93,7 @@ class Touple {
      * @return {Touple}
      */
     Normalize() {
-        mo.Normalize(this);
+        return mo.Normalize(this);
     }
 
     /**
@@ -170,6 +173,22 @@ class Touple {
     Shear(xy, xz, yx, yz, zx, zy) {
         return mo.MatrixMultiply(mt.Shearing(xy, xz, yx, yz, zx, zy), this);
     }
+
+    /**
+     * Casts a Touple, Vector, or Point as a vector. Discards the w component.
+     * @return {Vector}
+     */
+    AsVector() {
+        return new Vector(this.x, this.y, this.z);
+    }
+    
+    /**
+     * Casts a Touple, Vector, or Point as a point. Discards the w component.
+     * @return {Point}
+     */
+     AsPoint() {
+        return new Point(this.x, this.y, this.z);
+    }
 }
 
 class Vector extends Touple {
@@ -247,4 +266,91 @@ class Intersection {
         this.t = t;
         this.object = object;
     }
+    /**
+     * Calculates various values for the intersection and returns an IntersectionComputations object
+     * @param {Ray} r
+     */
+    getComputations(r) {
+        return new IntersectionComputations(r, this);
+    }
 }
+
+class World {
+    /**
+    * World to hold objects and light sources
+    * @param {...(Sphere|PointLight)} ...args
+    */
+    constructor(...args) {
+        this.shapes = [];
+        this.lights = [];
+        for (let i = 0; i < args.length; i++) {
+            if (args[i] instanceof PointLight)
+                this.lights.push(args[i]);
+            else if (args[i] instanceof Sphere)
+                this.shapes.push(args[i]);
+        }
+        if (this.shapes.length == 0 && this.lights.length == 0) {
+            let l = new PointLight(new Color(1, 1, 1), new Point(-10, 10, -10));
+            let s1 = new Sphere(mo.Get4x4IdentityMatrix(), new Material(new Color(.8, 1, .6), .1, .7, .2));
+            let s2 = new Sphere(mo.Get4x4IdentityMatrix().Scale(.5, .5, .5));
+            this.lights.push(l);
+            this.shapes.push(s1, s2);
+        }
+    }
+    /**
+     * Compute intersection points between a ray and all the shapes in a world. Returns [] if no collisions, 
+     * or an array of intersection objects with 2 elements for each collision if there are any. 
+     * If the intersection is on the tangent of the object (only one solution to the intersection), the same
+     * distance is given in two separate intersection objects. The intersection objects contain a reference
+     * to the object struck and the distance along the ray that the collisions occured. The intersection
+     * objects are sorted from closest to furthest. 
+     * @param {Ray} r
+     * @return {Intersection[]}
+     */
+    Intersect(r) {
+        let w = this;
+        let intersections = [];
+        for (let i = 0; i < w.shapes.length; i++) {
+            let rayints = int.Intersect(r, w.shapes[i]);
+            if (intersections.length == 0) intersections.push(...rayints);
+            else {
+                for (let j = 0; j < rayints.length; j++) {
+                    for (let k = 0; k < intersections.length; k++) {
+                        if (rayints[j].t < intersections[k].t) {
+                            intersections.splice(k, 0, rayints[j]);
+                            break;
+                        } else if (k == intersections.length - 1) {
+                            intersections.push(rayints[j]);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return intersections;
+    }
+}
+
+class IntersectionComputations {
+    /**
+    * Various pre-computed values for intersections
+    * @param {Ray} r
+    * @param {Intersection} intersection
+    */
+    constructor(r, intersection) {
+        this.t = intersection.t;
+        this.object = intersection.object;
+        this.point = r.Position(this.t);
+        this.eyev = r.d.Negate();
+        this.normalv = so.NormalAt(this.object, this.point);
+
+        if (this.normalv.Dot(this.eyev) < 0) {
+            this.inside = true;
+            this.normalv = this.normalv.Negate();
+        } else {
+            this.inside = false;
+        }
+    }
+}
+
+

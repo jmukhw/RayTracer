@@ -12,7 +12,7 @@ import { Matrix } from "../Types/Matrix.js"
  * @return {Point}
  */
 function Position(ray, t) {
-    return ray.o.Add(ray.d.Premultiply(t));
+    return ray.o.Add(ray.d.Premultiply(t)).AsPoint();
 }
 
 /**

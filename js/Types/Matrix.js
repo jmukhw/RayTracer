@@ -48,14 +48,24 @@ class Matrix {
         return mo.Negate(this);
     }
     /**
-     * Multiply this matrix by another matrix, touple, or scalar. Returns a touple if one of the inputs is a
-     * touple, otherwise returns a matrix.
+     * Premultiply this matrix by another matrix, touple, or scalar. Returns a touple if one of the inputs is a
+     * touple, otherwise returns a matrix. this*A
      * @param {Matrix|Touple|number} A
      * @return {Matrix|Touple}
      */
-    Multiply(A) {
+    Premultiply(A) {
         if (typeof (A) == 'number') return mo.ScalarMultiply(A, this);
         return mo.MatrixMultiply(this, A);
+    }
+    /**
+     * Postmultiply this matrix by another matrix, touple, or scalar. Returns a touple if one of the inputs is a
+     * touple, otherwise returns a matrix. A*this
+     * @param {Matrix|Touple|number} A
+     * @return {Matrix|Touple}
+     */
+    Postmultiply(A) {
+        if (typeof (A) == 'number') return mo.ScalarMultiply(A, this);
+        return mo.MatrixMultiply(A,this);
     }
     /**
      * Element-wise division of this matrix by a scalar.
@@ -143,6 +153,6 @@ class Matrix {
      * @return {Matrix}
      */
     Shear(xy, xz, yx, yz, zx, zy) {
-        return mo.MatrixMultiply(this,mt.Shearing(xy, xz, yx, yz, zx, zy));
+        return mo.MatrixMultiply(this, mt.Shearing(xy, xz, yx, yz, zx, zy));
     }
 }

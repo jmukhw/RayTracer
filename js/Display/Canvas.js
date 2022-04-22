@@ -105,9 +105,9 @@ class Canvas {
             for (let j = y; j < y+h; j++) {
                 var pos = Math.round(j) * this.width + Math.round(i);
                 if (pos >= 0 & pos * 4 + 2 < this.pixels.length) {
-                    this.pixels[pos * 4 + 0] = color.r;
-                    this.pixels[pos * 4 + 1] = color.g;
-                    this.pixels[pos * 4 + 2] = color.b;
+                    this.pixels[pos * 4 + 0] = Math.floor(this.remap(color.r,0,255,0,1));
+                    this.pixels[pos * 4 + 1] = Math.floor(this.remap(color.g,0,255,0,1));
+                    this.pixels[pos * 4 + 2] = Math.floor(this.remap(color.b,0,255,0,1));
                 }
             }
         }
@@ -153,6 +153,9 @@ class Canvas {
             c.b = Math.max(20,zcol*200);
             this.setPixelRect(p2.x, p2.y, Math.max(1,zcol*w), Math.max(1,zcol*w), c);
         }
+    }
+    drawPoint(p0, origin, pixel_size, c) {
+        this.setPixelRect(p0.x, p0.y, pixel_size, pixel_size, c);
     }
     remap(x, newMin, newMax, oldMin, oldMax) {
         return ((x-oldMin)/(oldMax-oldMin))*(newMax-newMin)+newMin

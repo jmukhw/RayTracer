@@ -3,7 +3,8 @@ export {Translation,
         Rotation_x,
         Rotation_y,
         Rotation_z,
-        Shearing}
+        Shearing,
+        ViewTransform}
 
 import { Matrix } from "../Types/Matrix.js"
 import * as mo from "./MatrixOps.js" 
@@ -101,4 +102,24 @@ function Rotation_x(rads) {
     T.values[2*4+1] = zy; 
 
     return T;
+}
+
+/**
+ * Compute and return a view transform matrix
+ * @param {Vector} from
+ * @param {Vector} to
+ * @param {Vector} up
+ * @return {Matrix}
+ */
+ function ViewTransform(from, to, up) {
+    let forward = to.Subtract(from).Normalize();
+    let left = mo.Cross(forward, up.Normalize());
+    let true_up = mo.Cross(left, forward);
+
+    let orientation = new Matrix(4,4,
+        [left.x, left.y, left.z, 0,
+        true_up.x, true_up.y, true_up.z, 0,
+        -forward.x, -forward.y, -forward.z, 0,
+        0,0,0,1]);
+    return orientation.Premultiply(Translation(-from.x, -from.y, -from.z));
 }
