@@ -8,6 +8,7 @@ import * as int from "./Operations/Intersections.js"
 import * as so from "./Operations/ShapeOps.js"
 import { Color } from "./Types/Color.js";
 import { Material, PointLight, Sphere, Camera } from "./Types/Shapes.js";
+import { Ziggurat } from "./Operations/GaussianOps.js"
 
 
 class RayTracer {
@@ -19,6 +20,8 @@ class RayTracer {
         this.canvas = new Canvas(HTMLCanvas, 0, 0, 1, true);
         this.startTime = undefined;
         this.canvas.clearCanvas(new Color(0, 0, 0));
+        let z = new Ziggurat();
+        this.rnd = z.nextGaussian;
         this.animate = true;
         let t = this;
         let i = 0;
@@ -28,7 +31,7 @@ class RayTracer {
             t.drawSpherePhongShaded(i++);
         },1000);
         */
-        for (i = 0; i < 1; i++) {
+        for (i = 0; i < 1; i+=1) {
             t.drawCameraScene1((i++) / 3);
         }
 
@@ -37,19 +40,19 @@ class RayTracer {
         let pixel_scale = 1;
         let s1 = new Sphere(mt.Scaling(2,2,2).Translate(-1,-1,1), new Material(new Color(.8, .2, .1), .1, .4, .6, 50))
         let s5 = new Sphere(mt.Scaling(2,1,1.5).Translate(1.5,-3,2), new Material(new Color(.1, .8, .6), .1, .5, .3, 8))
-        let s6 = new Sphere(mt.Scaling(1,1,1).Translate(0,-3,0).Shear(.3,0.2,0.3,.1,.1,.1), new Material(new Color(.4, .8, .9), .1, .9, .1, 1))
+        let s6 = new Sphere(mt.Scaling(1,1,1).Translate(0,-3,0).Rotate_z(t/10).Shear(.3,0.2,0.3,.1,.1,.1), new Material(new Color(.4, .8, .9), .1, .9, .1, 1))
         let s2 = new Sphere(mt.Scaling(50,50,1).Translate(0,0,10), new Material(new Color(.8, .7, .89), .3, .4, .1, 1))
         let s3 = new Sphere(mt.Scaling(50,1,50).Translate(0,-5,0), new Material(new Color(.3, .2, .3), .3, .4, .1, 1))
         let s4 = new Sphere(mt.Scaling(1,50,50).Translate(-7,0,0), new Material(new Color(.8, .7, .89), .3, .4, .1, 1))
-        let light = new PointLight(new Color(.68,.69,.69), new Point(4,5*Math.sin(t/10),0));
-        let light2 = new PointLight(new Color(.68,.69,.69), new Point(2,1,0));
+        let light = new PointLight(new Color(.68,.69,.69), new Point(1,1,1));
+        let light2 = new PointLight(new Color(.68,.69,.69), new Point(Math.sin(t/5)*6,1,Math.cos(t/5)*6));
         let w = new World(s1, s2, s3, s4, s5, s6, light, light2);
-        let camera = new Camera(100, 100, Math.PI / 2);
-        let from = new Point(0, 0, -5);
-        let to = new Point(0, 0, 0);
+        let camera = new Camera(400, 400, Math.PI / 2);
+        let from = new Point(0, 0, -3);
+        let to = new Point(0, -1, 0);
         let up = new Vector(0, 1, 0);
         camera.transform = mt.ViewTransform(from, to, up);
-        camera.Render(w);
+        camera.RenderWithApeture(w,100, this.rnd);
 
         this.RenderCameraCanvas(camera,pixel_scale);
 

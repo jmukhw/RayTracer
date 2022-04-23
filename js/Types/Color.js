@@ -24,6 +24,14 @@ class Color {
     }
 
     /**
+     * Return a new color with the value of this multiplied by n elementwise
+     * @param {number} n
+     */
+    MultipleScalar(n) {
+        return new Color(this.r * n, this.g * n, this.b * n);
+    }
+
+    /**
      * Test if a given color is equal to this color
      * @param {Color} c
      */

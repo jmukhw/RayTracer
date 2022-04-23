@@ -68,10 +68,11 @@ class Camera {
      * @param {number} vsize
      * @param {number} field_of_view
      */
-    constructor(hsize, vsize, field_of_view) {
+    constructor(hsize, vsize, field_of_view, aperture_size = .01) {
         this.hsize = hsize;
         this.vsize = vsize;
         this.field_of_view = field_of_view;
+        this.aperture_size = aperture_size;
         this.transform = mo.Get4x4IdentityMatrix();
 
         this.half_view = Math.tan(field_of_view / 2);
@@ -87,7 +88,7 @@ class Camera {
         this.canvas = [];
         this.canvas.length = hsize * vsize;
 
-        let bgcolor = new Color(.69,.69,.420);
+        let bgcolor = new Color(.69, .69, .420);
         for (let y = 0; y < this.vsize - 1; y++) {
             for (let x = 0; x < this.hsize - 1; x++) {
                 this.SetPixel(x, y, bgcolor);
@@ -112,16 +113,85 @@ class Camera {
 
         return new Ray(origin, direction);
     }
+    /**
+     * Returns a new Ray that starts at the camera perturbed by distance and rotation values to
+     * simulate an apeture and passes through the indicated x, y pixel on the canvas.
+     * @param {number} x
+     * @param {number} y
+     * @param {number} radians
+     * @param {number} dist
+     */
+    RayForPixelAperture(x, y, radians, dist) {
+        let xoff = (x + .5) * this.pixel_size;
+        let yoff = (y + .5) * this.pixel_size;
+
+        let xworld = this.half_width - xoff;
+        let yworld = this.half_height - yoff;
+
+        let pixel = this.transform.Invert().Premultiply(new Point(xworld, yworld, -1));
+        let origin = this.transform.Invert().Premultiply(new Point(Math.cos(radians)*dist, Math.sin(radians)*dist, 0));
+        let direction = pixel.Subtract(origin).Normalize();
+
+        return new Ray(origin, direction);
+    }
 
     /**
-     * Renders the given World object and returns a 1-dimensional array of length hsize*vsize filled with Color objects for each pixel
+     * Renders the given World object and returns a 1-dimensional array of length hsize*vsize 
+     * filled with Color objects for each pixel. Can specify number of anti-aliasing samples,
+     * which are computed as a series of rays in a ring around each pixel; 8-12 produces a nice 
+     * result
      * @param {World} world
+     * @param {number} samples
      */
-    Render(world) {
+    Render(world, samples = 0) {
         for (let y = 0; y < this.vsize - 1; y++) {
             for (let x = 0; x < this.hsize - 1; x++) {
-                let ray = this.RayForPixel(x, y);
-                let color = so.ColorAt(world, ray);
+                let sampleDist = .75;
+                let color = so.ColorAt(world, this.RayForPixel(x, y));
+                let sampleWeight = 1;
+                for (let n = 0; n < samples; n++) {
+                    let rad = Math.PI * 2 / (n / samples);
+                    let xoff = sampleDist * Math.cos(rad);
+                    let yoff = sampleDist * Math.sin(rad);
+                    let ray = this.RayForPixel(x + xoff, y + yoff);
+                    let sampleColor = so.ColorAt(world, ray);
+                    sampleColor.MultipleScalar(sampleWeight);
+                    color = color.Add(sampleColor);
+                }
+                color = color.MultipleScalar(1 / (samples * sampleWeight + 1));
+                this.SetPixel(x, y, color);
+            }
+        }
+        return this.canvas;
+    }
+    /**
+     * Renders the given World object and returns a 1-dimensional array of length hsize*vsize 
+     * filled with Color objects for each pixel. Can specify number of samples, which are computed 
+     * as a series of rays from random locations within the apeture. The apeture is simulated by
+     * generating two pseudorandom numbers: one from a gaussian distribution with a mean of 0 and
+     * standard deviation equal to the "apeture distance" divided by 4, the other from a uniform
+     * distribution. The gaussian and uniform values are used as polar coordinates to offset the
+     * ray origin.  
+     * 
+     * @param {World} world
+     * @param {number} samples
+     * @param {function} rnd
+     */
+    RenderWithApeture(world, samples, rnd) {
+        let sampleWeight = .75;
+        for (let y = 0; y < this.vsize - 1; y++) {
+            for (let x = 0; x < this.hsize - 1; x++) {
+                let color = so.ColorAt(world, this.RayForPixel(x, y));
+                for (let n = 0; n < samples; n++) {
+                    let radians = Math.random()*Math.PI*2;
+                    let dist = rnd()*this.aperture_size;
+
+                    let ray = this.RayForPixelAperture(x, y, radians, dist);
+                    let sampleColor = so.ColorAt(world, ray);
+                    sampleColor.MultipleScalar(sampleWeight);
+                    color = color.Add(sampleColor);
+                }
+                color = color.MultipleScalar(1 / (samples * sampleWeight + 1));
                 this.SetPixel(x, y, color);
             }
         }

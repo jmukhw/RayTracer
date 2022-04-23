@@ -343,6 +343,7 @@ class IntersectionComputations {
         this.point = r.Position(this.t);
         this.eyev = r.d.Negate();
         this.normalv = so.NormalAt(this.object, this.point);
+        this.over_point = this.point.Add(this.normalv.Premultiply(0.0001));
 
         if (this.normalv.Dot(this.eyev) < 0) {
             this.inside = true;
