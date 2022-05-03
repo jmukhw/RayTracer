@@ -3,7 +3,7 @@ import * as mo from "../Operations/MatrixOps.js"
 import * as so from "../Operations/ShapeOps.js"
 import * as mt from "../Operations/MatrixTrans.js"
 import * as int from "../Operations/Intersections.js"
-import { Material, PointLight, Sphere } from "./Shapes.js";
+import { Material, PointLight, Sphere, Shape } from "./Shapes.js";
 import { Color } from "./Color.js";
 
 class Touple {
@@ -200,7 +200,7 @@ class Vector extends Touple {
      */
     constructor(x = 0, y = 0, z = 0) {
         super(x, y, z, 0);
-        Object.defineProperty(this, 'w', { value: 0, writable: false });
+        //Object.defineProperty(this, 'w', { value: 0, writable: false });
     }
 }
 
@@ -214,7 +214,7 @@ class Point extends Touple {
      */
     constructor(x = 0, y = 0, z = 0) {
         super(x, y, z, 1);
-        Object.defineProperty(this, 'w', { value: 1, writable: false });
+        //Object.defineProperty(this, 'w', { value: 1, writable: false });
     }
 }
 
@@ -278,7 +278,7 @@ class Intersection {
 class World {
     /**
     * World to hold objects and light sources
-    * @param {...(Sphere|PointLight)} ...args
+    * @param {...(Shape|PointLight)} ...args
     */
     constructor(...args) {
         this.shapes = [];
@@ -286,7 +286,7 @@ class World {
         for (let i = 0; i < args.length; i++) {
             if (args[i] instanceof PointLight)
                 this.lights.push(args[i]);
-            else if (args[i] instanceof Sphere)
+            else if (args[i] instanceof Shape)
                 this.shapes.push(args[i]);
         }
         if (this.shapes.length == 0 && this.lights.length == 0) {
@@ -311,7 +311,7 @@ class World {
         let w = this;
         let intersections = [];
         for (let i = 0; i < w.shapes.length; i++) {
-            let rayints = int.Intersect(r, w.shapes[i]);
+            let rayints = w.shapes[i].Intersect(r);
             if (intersections.length == 0) intersections.push(...rayints);
             else {
                 for (let j = 0; j < rayints.length; j++) {
@@ -342,7 +342,7 @@ class IntersectionComputations {
         this.object = intersection.object;
         this.point = r.Position(this.t);
         this.eyev = r.d.Negate();
-        this.normalv = so.NormalAt(this.object, this.point);
+        this.normalv = this.object.NormalAt(this.point);
         this.over_point = this.point.Add(this.normalv.Premultiply(0.0001));
 
         if (this.normalv.Dot(this.eyev) < 0) {

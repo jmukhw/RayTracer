@@ -7,7 +7,7 @@ import * as mt from "./Operations/MatrixTrans.js"
 import * as int from "./Operations/Intersections.js"
 import * as so from "./Operations/ShapeOps.js"
 import { Color } from "./Types/Color.js";
-import { Material, PointLight, Sphere, Camera } from "./Types/Shapes.js";
+import { Material, PointLight, Sphere, Camera, Plane } from "./Types/Shapes.js";
 import { Ziggurat } from "./Operations/GaussianOps.js"
 
 
@@ -32,8 +32,34 @@ class RayTracer {
         },1000);
         */
         for (i = 0; i < 1; i+=1) {
-            t.drawCameraScene1((i++) / 3);
+            t.drawCameraScene2((i++) / 3);
         }
+
+    }
+    drawCameraScene2(t) {
+        let pixel_scale = 1;
+        let spheres = [new Sphere(mt.Translation(0,1,-1), new Material(new Color(.8, .2, .1), .1, .4, .6, 50)),
+                       new Sphere(mt.Translation(0,2,3), new Material(new Color(.8, .9, .1), .1, .4, .6, 50)),
+                       new Sphere(mt.Translation(-3,1,2), new Material(new Color(.8, .2, .9), .1, .4, .6, 50))];
+
+        let groundMat = new Material(new Color(.47, .4, .45), .06, .2, .05, 3);
+        let wallMat = new Material(new Color(.7, .75, .85), .02, .4, .1, 3);
+        let planes = [new Plane(mt.Translation(0,0,0), groundMat),
+                      new Plane(mt.Translation(0,0,10).Rotate_x(Math.PI*3/2), wallMat),
+                      new Plane(mt.Translation(5,0,0).Rotate_z(Math.PI/2), wallMat)];
+        let lights = [new PointLight(new Color(.7, .68, .69).MultipleScalar(1), new Point(0, 1, 0)),
+                      new PointLight(new Color(.7, .68, .69).MultipleScalar(1), new Point(-2, 0, -2)),
+                      new PointLight(new Color(.7, .68, .69).MultipleScalar(.5), new Point(2, .5, -1))];
+        let w = new World(...spheres, ...planes, ...lights);
+
+        let camera = new Camera(500, 500, Math.PI / 2);
+        let from = new Point(0, 3, -3);
+        let to = new Point(0, 0, 0);
+        let up = new Vector(0, 1, 0);
+        camera.transform = mt.ViewTransform(from, to, up);
+        camera.RenderWithApeture(w,10, this.rnd);
+
+        this.RenderCameraCanvas(camera,pixel_scale);
 
     }
     drawCameraScene1(t) {
@@ -52,11 +78,12 @@ class RayTracer {
         let to = new Point(0, -1, 0);
         let up = new Vector(0, 1, 0);
         camera.transform = mt.ViewTransform(from, to, up);
-        camera.RenderWithApeture(w,100, this.rnd);
+        camera.RenderWithApeture(w,10, this.rnd);
 
         this.RenderCameraCanvas(camera,pixel_scale);
 
     }
+    
     draw(t) {
         if (this.startTime == undefined) this.startTime = t;
         if (t - this.startTime < 30) {

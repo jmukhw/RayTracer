@@ -1,4 +1,4 @@
-export { NormalAt, Reflect, Lighting, ShadeHit, ColorAt, IsShadowed, SoftShadowAmount }
+export { Reflect, Lighting, ShadeHit, ColorAt, IsShadowed, SoftShadowAmount }
 
 import { Touple, Point, Vector, Ray, IntersectionComputations } from "../Types/Touple.js"
 import { Color } from "../Types/Color.js"
@@ -6,20 +6,6 @@ import { Matrix } from "../Types/Matrix.js"
 import { MultiplyColors, ScalarMultiply, Add, Smoothstep } from "./MatrixOps.js"
 import { Hit } from "./Intersections.js"
 import * as mt from "./MatrixTrans.js"
-
-/**
- * Computes the normal vector on a sphere at a point, returns the vector. Note that we assume the the point is on the sphere's surface.
- * @param {Sphere} dx
- * @param {Point} dy
- * @return {Vector}
- */
-function NormalAt(sphere, world_point) {
-    let object_point = sphere.transform.Invert().Premultiply(world_point);
-    let object_normal = object_point.Subtract(new Point(0, 0, 0))
-    let world_normal = sphere.transform.Invert().Transpose().Premultiply(object_normal);
-    let v = new Vector(world_normal.x, world_normal.y, world_normal.z).Normalize();
-    return v;
-}
 
 /**
  * Reflects vector 'in' about vector 'normal' and returns it.

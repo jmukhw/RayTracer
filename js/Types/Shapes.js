@@ -1,15 +1,17 @@
-export { Sphere, PointLight, Material, Camera }
+export { Shape, Sphere, Plane, PointLight, Material, Camera }
 import * as mo from "../Operations/MatrixOps.js"
 import * as so from "../Operations/ShapeOps.js"
 import * as mt from "../Operations/MatrixTrans.js"
 import * as int from "../Operations/Intersections.js"
 import { Color } from "./Color.js";
-import { Point, Ray } from "./Touple.js";
+import { Point, Ray, Vector, Intersection } from "./Touple.js";
 
-class Sphere {
+
+class Shape {
     /**
-     * A sphere with specified 4x4 transformation matrix; if transform is undefined, it will be an identity matrix
+     * An abstract shape class with specified 4x4 transformation matrix; if transform is undefined, it will be an identity matrix
      * @param {Matrix} transform
+     * @param {Material} material
      */
     constructor(transform, material) {
         if (globalThis.rtuid == undefined) {
@@ -22,11 +24,112 @@ class Sphere {
         this.material = material;
     }
     /**
-     * Set the sphere's 4x4 transformation matrix
-     * @param {Matrix} transform
-     */
+    * Set the sphere's 4x4 transformation matrix
+    * @param {Matrix} transform
+    */
     SetTransform(transform) {
         this.transform = transform;
+    }
+    /**
+     * Test the intersection of this shape with a ray. Converts the ray to the object's local space, then calls the child's LocalIntersect 
+     * function
+     * @param {Ray} ray
+     */
+    Intersect(ray) {
+        let local_ray = ray.Transform(this.transform.Invert());
+        this.saved_ray = local_ray;
+        return this.LocalIntersect(local_ray);
+    }
+    /**
+     * Test the intersection of this shape with a ray. Takes a ray that has already been transformed to the object's space. Must be overridden by
+     * each child class.
+     * @param {Ray} ray
+     */
+    LocalIntersect(ray) {
+        throw new Error("LocalIntersect called for abstract shape class with id (" + this.uid + "). Did you forget to override it?");
+    }
+    /**
+     * Calculates the normal of the shape at a given point in world space. Converts the point to object space, then calls LocalNormalAt with it. 
+     * it then converts the local normal into world coordinates.
+     * @param {Point} point
+     */
+    NormalAt(point) {
+        let local_point = this.transform.Invert().Premultiply(point);
+        let local_normal = this.LocalNormalAt(local_point);
+        let world_normal = mo.MatrixTranspose(this.transform.Invert()).Premultiply(local_normal);
+        world_normal.w = 0;
+        world_normal = world_normal.Normalize();
+        return world_normal;
+    }
+    /**
+     * Returns the normal at a given point that has already been transformed to the object's space. Must be overridden by
+     * each child class.
+     * @param {Point} point
+     */
+    LocalNormalAt(point) {
+        return point.AsVector();
+        //throw new Error("LocalNormalAt called for abstract shape class with id (" + this.uid + "). Did you forget to override it?");
+    }
+}
+
+class Sphere extends Shape {
+    /**
+     * A sphere with specified 4x4 transformation matrix; if transform is undefined, it will be an identity matrix
+     * @param {Matrix} transform
+     */
+    constructor(transform, material) {
+        super(transform, material);
+    }
+    /**
+     * Test the intersection of this sphere with a ray. Takes a ray that has already been transformed to the object's space.
+     * @param {Ray} ray
+     */
+    LocalIntersect(ray) {
+        let sphere_to_ray = ray.o.Subtract(new Point(0, 0, 0));
+        let a = ray.d.Dot(ray.d);
+        let b = 2 * ray.d.Dot(sphere_to_ray);
+        let c = sphere_to_ray.Dot(sphere_to_ray) - 1;
+        let discriminant = b * b - 4 * a * c;
+        if (discriminant < 0) return [];
+        let t1 = (-b - Math.sqrt(discriminant)) / (2 * a);
+        let t2 = (-b + Math.sqrt(discriminant)) / (2 * a);
+        return int.Intersections(new Intersection(t1, this), new Intersection(t2, this));
+    }
+    /**
+     * Returns the normal at a given point of that has already been transformed to the object's space. 
+     * @param {Point} point
+     */
+    LocalNormalAt(point) {
+        return point.Subtract(new Point(0, 0, 0)).AsVector();
+    }
+
+}
+
+class Plane extends Shape {
+    /**
+     * A plane with specified 4x4 transformation matrix; if transform is undefined, it will be an identity matrix
+     * @param {Matrix} transform
+     */
+    constructor(transform, material) {
+        super(transform, material);
+    }
+    /**
+     * Test the intersection of this plane with a ray. Takes a ray that has already been transformed to the object's space.
+     * @param {Ray} ray
+     */
+    LocalIntersect(ray) {
+        if (Math.abs(ray.d.y) < .001) {
+            return [];
+        }
+        let t = -ray.o.y / ray.d.y;
+        return int.Intersections(new Intersection(t, this));
+    }
+    /**
+     * Returns the normal at a given point of that has already been transformed to the object's space. 
+     * @param {Point} point
+     */
+    LocalNormalAt(point) {
+        return new Vector(0,1,0);
     }
 }
 
@@ -129,7 +232,7 @@ class Camera {
         let yworld = this.half_height - yoff;
 
         let pixel = this.transform.Invert().Premultiply(new Point(xworld, yworld, -1));
-        let origin = this.transform.Invert().Premultiply(new Point(Math.cos(radians)*dist, Math.sin(radians)*dist, 0));
+        let origin = this.transform.Invert().Premultiply(new Point(Math.cos(radians) * dist, Math.sin(radians) * dist, 0));
         let direction = pixel.Subtract(origin).Normalize();
 
         return new Ray(origin, direction);
@@ -183,8 +286,8 @@ class Camera {
             for (let x = 0; x < this.hsize - 1; x++) {
                 let color = so.ColorAt(world, this.RayForPixel(x, y));
                 for (let n = 0; n < samples; n++) {
-                    let radians = Math.random()*Math.PI*2;
-                    let dist = rnd()*this.aperture_size;
+                    let radians = Math.random() * Math.PI * 2;
+                    let dist = rnd() * this.aperture_size * .25;
 
                     let ray = this.RayForPixelAperture(x, y, radians, dist);
                     let sampleColor = so.ColorAt(world, ray);
