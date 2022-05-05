@@ -1,4 +1,4 @@
-export { Shape, Sphere, Plane, PointLight, Material, Camera }
+export { Shape, Sphere, Plane, PointLight, Material, PatternStriped, PatternGradient, PatternRing, PatternChecker, Camera }
 import * as mo from "../Operations/MatrixOps.js"
 import * as so from "../Operations/ShapeOps.js"
 import * as mt from "../Operations/MatrixTrans.js"
@@ -129,7 +129,7 @@ class Plane extends Shape {
      * @param {Point} point
      */
     LocalNormalAt(point) {
-        return new Vector(0,1,0);
+        return new Vector(0, 1, 0);
     }
 }
 
@@ -153,17 +153,138 @@ class Material {
      * @param {number} diffuse
      * @param {number} specular
      * @param {number} shininess
+     * @param {Pattern} pattern
      */
-    constructor(color, ambient = 0.1, diffuse = 0.9, specular = 0.9, shininess = 200.0) {
+    constructor(color, ambient = 0.1, diffuse = 0.9, specular = 0.9, shininess = 200.0, pattern = null) {
         if (color == undefined) color = new Color(1, 1, 1);
         this.color = color;
         this.ambient = ambient;
         this.diffuse = diffuse;
         this.specular = specular;
         this.shininess = shininess;
+        this.pattern = pattern;
     }
 }
 
+class Pattern {
+    /**
+     * Patterns are properties of the material object that return color as a function of position
+     */
+    constructor(transform) {
+        if (transform == undefined) transform = mo.Get4x4IdentityMatrix();
+        this.transform = transform;
+    }
+    /**
+     * Returns the color at a given point in world space on an object. Transforms to object and 
+     * then pattern space, then calls LocalColorAt adn returns the result.
+     * @param {Point} point
+     * @param {Shape} shape
+     */
+    ColorAt(point, shape) {
+        let object_point = shape.transform.Invert().Premultiply(point);
+        let pattern_point = this.transform.Invert().Premultiply(object_point);
+        return this.LocalColorAt(pattern_point);
+    }
+    /**
+     * Returns the color at a given point in object space. Should be overridden by children of the Pattern class
+     * @param {Point} point
+     */
+    LocalColorAt(point) {
+        return new Color(1, 0, 1);
+    }
+
+}
+class PatternStriped extends Pattern {
+    /**
+     * A striped pattern which alternates between colors a and b as:
+     * floor(point.x) % 2 == 0 ? a : b
+     * @param {Color} a
+     * @param {Color} b
+     */
+    constructor(a, b, transform = undefined) {
+        super(transform);
+        this.a = a;
+        this.b = b;
+    }
+    /**
+     * Returns the color at a given point as:
+     * floor(point.x) % 2 == 0 ? a : b
+     * Should not be called directly, rather call ColorAt which transforms
+     * the point from world to pattern space and calls this in turn.
+     * @param {Point} point
+     */
+    LocalColorAt(point) {
+        return Math.floor(point.x) % 2 == 0 ? this.a : this.b;
+    }
+}
+class PatternGradient extends Pattern {
+    /**
+     * A gradient pattern which transitions from color a to b.
+     * @param {Color} a
+     * @param {Color} b
+     */
+    constructor(a, b, transform = undefined) {
+        super(transform);
+        this.a = a;
+        this.b = b;
+    }
+    /**
+     * Returns a gradient pattern
+     * @param {Point} point
+     */
+    LocalColorAt(point) {
+        let offset = 1;
+        let x = point.x + offset;
+        let r = this.b.r - this.a.r;
+        let g = this.b.g - this.a.g;
+        let b = this.b.b - this.a.b;
+        let frac = x - Math.floor(x + Math.sign(x) == -1 ? 1 : 0);
+
+        return new Color(this.a.r + r * frac,
+            this.a.g + g * frac,
+            this.a.b + b * frac);
+    }
+}
+
+class PatternRing extends Pattern {
+    /**
+     * A ring pattern which transitions from color a to b.
+     * @param {Color} a
+     * @param {Color} b
+     */
+    constructor(a, b, transform = undefined) {
+        super(transform);
+        this.a = a;
+        this.b = b;
+    }
+    /**
+     * Returns a ring pattern
+     * @param {Point} point
+     */
+    LocalColorAt(point) {
+        return Math.floor(Math.sqrt(point.x * point.x + point.y * point.y)) % 2 == 0 ? this.a : this.b;
+    }
+}
+
+class PatternChecker extends Pattern {
+    /**
+     * A checker pattern which transitions from color a to b.
+     * @param {Color} a
+     * @param {Color} b
+     */
+    constructor(a, b, transform = undefined) {
+        super(transform);
+        this.a = a;
+        this.b = b;
+    }
+    /**
+     * Returns a checker pattern
+     * @param {Point} point
+     */
+    LocalColorAt(point) {
+        return (Math.floor(point.x) + Math.floor(point.y) + Math.floor(point.z)) % 2 == 0 ? this.a : this.b;
+    }
+}
 class Camera {
     /**
      * Create a camera where hsize and vsize are the horizontal and vertical size of the canvas in pixels. Field of view is the angle (in radians) of the view.
