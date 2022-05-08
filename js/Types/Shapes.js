@@ -1,4 +1,8 @@
-export { Shape, Sphere, Plane, PointLight, Material, PatternStriped, PatternGradient, PatternRing, PatternChecker, Camera }
+export {
+    Shape, Sphere, GlassSphere, Plane, PointLight, Material, PatternStriped,
+    PatternGradient, PatternRing, PatternChecker, PatternBlended,
+    Camera
+}
 import * as mo from "../Operations/MatrixOps.js"
 import * as so from "../Operations/ShapeOps.js"
 import * as mt from "../Operations/MatrixTrans.js"
@@ -76,6 +80,7 @@ class Sphere extends Shape {
     /**
      * A sphere with specified 4x4 transformation matrix; if transform is undefined, it will be an identity matrix
      * @param {Matrix} transform
+     * @param {Material} material
      */
     constructor(transform, material) {
         super(transform, material);
@@ -103,6 +108,21 @@ class Sphere extends Shape {
         return point.Subtract(new Point(0, 0, 0)).AsVector();
     }
 
+}
+class GlassSphere extends Sphere {
+    /**
+     * A sphere with specified 4x4 transformation matrix; if transform is undefined, it will be an identity matrix. Has a glass-like material.
+     * @param {Matrix} transform
+     * @param {Material} material
+     */
+    constructor(transform, material) {
+        if (material == undefined) {
+            material = new Material();
+            material.transparency = 1;
+            material.refractive_index = 1.5;
+        }
+        super(transform, material);
+    }
 }
 
 class Plane extends Shape {
@@ -154,8 +174,9 @@ class Material {
      * @param {number} specular
      * @param {number} shininess
      * @param {Pattern} pattern
+     * @param {number} reflective
      */
-    constructor(color, ambient = 0.1, diffuse = 0.9, specular = 0.9, shininess = 200.0, pattern = null) {
+    constructor(color, ambient = 0.1, diffuse = 0.9, specular = 0.9, shininess = 200.0, pattern = null, reflective = 0, transparency = 0, refractive_index = 1) {
         if (color == undefined) color = new Color(1, 1, 1);
         this.color = color;
         this.ambient = ambient;
@@ -163,6 +184,9 @@ class Material {
         this.specular = specular;
         this.shininess = shininess;
         this.pattern = pattern;
+        this.reflective = reflective;
+        this.transparency = transparency;
+        this.refractive_index = refractive_index;
     }
 }
 
@@ -283,6 +307,28 @@ class PatternChecker extends Pattern {
      */
     LocalColorAt(point) {
         return (Math.floor(point.x) + Math.floor(point.y) + Math.floor(point.z)) % 2 == 0 ? this.a : this.b;
+    }
+}
+
+class PatternBlended extends Pattern {
+    /**
+     * A pattern that blends two different patterns
+     * @param {Pattern} a
+     * @param {Pattern} b
+     */
+    constructor(a, b, transform = undefined) {
+        super(transform);
+        this.a = a;
+        this.b = b;
+    }
+    /**
+     * Returns a blended pattern
+     * @param {Point} point
+     */
+    LocalColorAt(point) {
+        let ca = this.a.LocalColorAt(this.a.transform.Invert().Premultiply(point));
+        let cb = this.b.LocalColorAt(this.b.transform.Invert().Premultiply(point));
+        return new Color((ca.r + cb.r) / 2, (ca.g + cb.g) / 2, (ca.b + cb.b) / 2);
     }
 }
 class Camera {

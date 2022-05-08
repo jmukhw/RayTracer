@@ -7,7 +7,7 @@ import * as mt from "./Operations/MatrixTrans.js"
 import * as int from "./Operations/Intersections.js"
 import * as so from "./Operations/ShapeOps.js"
 import { Color } from "./Types/Color.js";
-import { Material, PointLight, Sphere, Camera, Plane, PatternStriped, PatternGradient, PatternRing, PatternChecker } from "./Types/Shapes.js";
+import { Material, PointLight, Sphere, Camera, Plane, PatternStriped, PatternGradient, PatternRing, PatternChecker, PatternBlended } from "./Types/Shapes.js";
 import { Ziggurat } from "./Operations/GaussianOps.js"
 
 
@@ -32,24 +32,24 @@ class RayTracer {
         },1000);
         */
         for (i = 0; i < 1; i += 1) {
-            t.drawCameraScene2((i++) / 3);
+            t.drawCameraScene3((i++) / 3);
         }
 
     }
-    drawCameraScene3(t) {
+    drawCameraScene4(t) {
         let pixel_scale = 3;
 
-        let groundMat = new Material(new Color(.47, .4, .45), .2, .2, .05, 3);
-        let plane = new Plane(mt.Translation(0, -1, 0), groundMat);
-        let light = new PointLight(new Color(.7, .68, .69), new Point(0, 4, -1));
-        //let m = new Material(new Color(1, 1, 1), .3, .01, .01, 3);
-        let m = new Material();
-        m.pattern = new PatternChecker(new Color(1, 0, 0), new Color(0, 0, 1), mt.Scaling(.5, .5, .5));
-        groundMat.pattern = m.pattern;
-        let s = new Sphere(mo.Get4x4IdentityMatrix().Rotate_y(t * Math.PI / 10), m);
-        let w = new World(s, plane, light);
+        let w = new World();
+        let m = new Material(new Color(1, 1, 1), .1, .3, .6, 10, new PatternGradient(new Color(1, .1, .1), new Color(.8, 1, .9)), .6);
 
-        let camera = new Camera(150, 150, Math.PI / 2);
+        let plane = new Plane(mt.Translation(0, -1, 0));
+        w.shapes.push(plane);
+
+
+        for (let i = 0; i < 5; i++) {
+            w.shapes.push(new Sphere(mt.Translation(i * 2 - 7, 1, 10), m));
+        }
+        let camera = new Camera(250, 250, Math.PI / 2);
         let from = new Point(0, 3, -3);
         let to = new Point(0, 0, 0);
         let up = new Vector(0, 1, 0);
@@ -59,14 +59,43 @@ class RayTracer {
         this.RenderCameraCanvas(camera, pixel_scale);
 
     }
-    drawCameraScene2(t) {
+    drawCameraScene3(t) {
         let pixel_scale = 1;
-        let spheres = [new Sphere(mt.Translation(0, 1, -1), new Material(new Color(.8, .2, .1), .05, .4, .6, 50, new PatternGradient(new Color(1, .1, .1), new Color(.8, 1, .9)))),
-        new Sphere(mt.Translation(0, 2, 3).Rotate_y((t / 2) * Math.PI / 4).Rotate_x((t / 2) * Math.PI / 4).Scale(2.5, 1, .5), new Material(new Color(.8, .9, .1), .05, .4, .6, 50, new PatternChecker(new Color(.2, .7, .7), new Color(.5, 1, 1), mt.Translation(.5, 0, 0)))),
-        new Sphere(mt.Translation(-3, 1, 2), new Material(new Color(.8, .2, .9), .05, .4, .6, 50, new PatternStriped(new Color(.7, .2, .3), new Color(1, .5, .6), mt.Scaling(.25, 1, 1))))];
 
-        let groundMat = new Material(new Color(.47, .4, .45), .2, .2, .05, 3, new PatternChecker(new Color(.05, .3, .1), new Color(.1, .4, .2)));
-        let wallMat = new Material(new Color(.7, .75, .85), .02, .25, .1, 3, new PatternStriped(new Color(.2, .7, .3), new Color(.5, 1, .6)));
+        let groundMat = new Material(new Color(.77, .74, .75), .02, .4, .0, 1000);
+        groundMat.reflective = .4;
+        let plane = new Plane(mt.Translation(0, -1, 0), groundMat);
+        let light = new PointLight(new Color(2.7, 2.68, 2.69), new Point(0, 3, -1));
+        //let m = new Material(new Color(1, 1, 1), .3, .01, .01, 3);
+        let m = new Material(new Color(1, 1, 1), .07, .4, .6, 1000);
+        m.reflective = .7;
+        m.pattern = new PatternBlended(
+            new PatternRing(new Color(.3, .7, .45), new Color(.4, .85, .5), mt.Scaling(.1, .2, .1)),
+            new PatternStriped(new Color(.1, .25, .05), new Color(.7, .8, .5), mt.Scaling(.1, .2, .25)));
+        groundMat.pattern = new PatternChecker(new Color(.85, .95, .85), new Color(.9, .98, .9), mt.Scaling(2, 2, 2));;
+        let s = new Sphere(mt.Translation(-2, 0, 0).Rotate_y(t * Math.PI / 10).Scale(2, 2, 2), m);
+        let s2 = new Sphere(mt.Translation(2, 1, -1), new Material(new Color(1, 1, 1), .01, .4, .4, 100, new PatternGradient(new Color(1, .1, .1), new Color(.8, 1, .9)), .6));
+
+        let w = new World(s, s2, plane, light);
+
+        let camera = new Camera(1000, 1000, Math.PI / 2);
+        let from = new Point(0, 3, -3);
+        let to = new Point(0, 0, 0);
+        let up = new Vector(0, 1, 0);
+        camera.transform = mt.ViewTransform(from, to, up);
+        camera.RenderWithApeture(w, 15, this.rnd);
+
+        this.RenderCameraCanvas(camera, pixel_scale);
+
+    }
+    drawCameraScene2(t) {
+        let pixel_scale = 4;
+        let spheres = [new Sphere(mt.Translation(0, 1, -1), new Material(new Color(.8, .2, .1), .05, .4, .6, 50, new PatternGradient(new Color(1, .1, .1), new Color(.8, 1, .9)), .6)),
+        new Sphere(mt.Translation(0, 2, 3).Rotate_y((t / 2) * Math.PI / 4).Rotate_x((t / 2) * Math.PI / 4).Scale(2.5, 1, .5), new Material(new Color(.8, .9, .1), .05, .4, .6, 50, new PatternChecker(new Color(.2, .7, .7), new Color(.5, 1, 1), mt.Translation(.5, 0, 0)), .75)),
+        new Sphere(mt.Translation(-3, 1, 2), new Material(new Color(.8, .2, .9), .05, .4, .6, 50, new PatternStriped(new Color(.7, .2, .3), new Color(1, .5, .6), mt.Scaling(.25, 1, 1)), .4))];
+
+        let groundMat = new Material(new Color(.47, .4, .45), .2, .2, .05, 3, new PatternChecker(new Color(.05, .3, .1), new Color(.1, .4, .2)), .4);
+        let wallMat = new Material(new Color(.7, .75, .85), .02, .25, .1, 3, new PatternStriped(new Color(.2, .7, .3), new Color(.5, 1, .6)), .6);
         let planes = [new Plane(mt.Translation(0, -1, 0), groundMat),
         new Plane(mt.Translation(0, 0, 10).Rotate_x(Math.PI * 3 / 2), wallMat),
         new Plane(mt.Translation(5, 0, 0).Rotate_z(Math.PI / 2), wallMat)];
@@ -76,12 +105,12 @@ class RayTracer {
 
         let w = new World(...spheres, ...planes, ...lights);
 
-        let camera = new Camera(500, 500, Math.PI / 2);
+        let camera = new Camera(50, 50, Math.PI / 2);
         let from = new Point(0, 3, -3);
         let to = new Point(0, 0, 0);
         let up = new Vector(0, 1, 0);
         camera.transform = mt.ViewTransform(from, to, up);
-        camera.RenderWithApeture(w, 10, this.rnd);
+        camera.RenderWithApeture(w, 1, this.rnd);
 
         this.RenderCameraCanvas(camera, pixel_scale);
 

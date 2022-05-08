@@ -181,12 +181,12 @@ class Touple {
     AsVector() {
         return new Vector(this.x, this.y, this.z);
     }
-    
+
     /**
      * Casts a Touple, Vector, or Point as a point. Discards the w component.
      * @return {Point}
      */
-     AsPoint() {
+    AsPoint() {
         return new Point(this.x, this.y, this.z);
     }
 }
@@ -336,14 +336,44 @@ class IntersectionComputations {
     * Various pre-computed values for intersections
     * @param {Ray} r
     * @param {Intersection} intersection
+    * @param {Intersections} intersections
     */
-    constructor(r, intersection) {
+    constructor(r, intersection, intersections = undefined) {
+        let containers = [];
+        if (intersections != undefined) {
+            for (let i = 0; i < intersections.length; i++) {
+                if (intersections[i] == intersection) {
+                    if (containers.length == 0) {
+                        this.n1 = 1;
+                    } else {
+                        this.n1 = containers[containers.length - 1].material.refractive_index;
+                    }
+                }
+                let index = containers.findIndex(v => v == intersections[i].object);
+                if (index == -1) {
+                    containers.push(intersections[i].object);
+                } else {
+                    containers.splice(index, 1);
+                }
+
+                if (intersections[i] == intersection) {
+                    if (containers.length == 0) {
+                        this.n2 = 1;
+                    } else {
+                        this.n2 = containers[containers.length - 1].material.refractive_index;
+                    }
+                    break;
+                }
+            }
+        }
         this.t = intersection.t;
         this.object = intersection.object;
         this.point = r.Position(this.t);
         this.eyev = r.d.Negate();
         this.normalv = this.object.NormalAt(this.point);
         this.over_point = this.point.Add(this.normalv.Premultiply(0.0001));
+        this.under_point = this.point.Subtract(this.normalv.Premultiply(0.0001));
+        this.reflectv = so.Reflect(r.d, this.normalv);
 
         if (this.normalv.Dot(this.eyev) < 0) {
             this.inside = true;
