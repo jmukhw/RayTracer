@@ -269,9 +269,10 @@ class Intersection {
     /**
      * Calculates various values for the intersection and returns an IntersectionComputations object
      * @param {Ray} r
+     * @param {Intersections} intersections
      */
-    getComputations(r) {
-        return new IntersectionComputations(r, this);
+    getComputations(r, intersections = undefined) {
+        return new IntersectionComputations(r, this, intersections);
     }
 }
 
@@ -371,9 +372,6 @@ class IntersectionComputations {
         this.point = r.Position(this.t);
         this.eyev = r.d.Negate();
         this.normalv = this.object.NormalAt(this.point);
-        this.over_point = this.point.Add(this.normalv.Premultiply(0.0001));
-        this.under_point = this.point.Subtract(this.normalv.Premultiply(0.0001));
-        this.reflectv = so.Reflect(r.d, this.normalv);
 
         if (this.normalv.Dot(this.eyev) < 0) {
             this.inside = true;
@@ -381,6 +379,12 @@ class IntersectionComputations {
         } else {
             this.inside = false;
         }
+
+        this.over_point = this.point.Add(this.normalv.Premultiply(0.0001));
+        this.under_point = this.point.Subtract(this.normalv.Premultiply(0.0001));
+        this.reflectv = so.Reflect(r.d, this.normalv);
+
+
     }
 }
 

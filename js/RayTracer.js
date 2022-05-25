@@ -7,7 +7,7 @@ import * as mt from "./Operations/MatrixTrans.js"
 import * as int from "./Operations/Intersections.js"
 import * as so from "./Operations/ShapeOps.js"
 import { Color } from "./Types/Color.js";
-import { Material, PointLight, Sphere, Camera, Plane, PatternStriped, PatternGradient, PatternRing, PatternChecker, PatternBlended } from "./Types/Shapes.js";
+import { Material, PointLight, Sphere, Camera, Plane, Cube, PatternStriped, PatternGradient, PatternRing, PatternChecker, PatternBlended, GlassSphere, Cylinder } from "./Types/Shapes.js";
 import { Ziggurat } from "./Operations/GaussianOps.js"
 
 
@@ -25,32 +25,196 @@ class RayTracer {
         this.animate = true;
         let t = this;
         let i = 0;
+        this.frameTimeMS = 100;
         //t.drawSpherePhongShaded(i++);
         /*
         setInterval(() => {
             t.drawSpherePhongShaded(i++);
         },1000);
         */
-        for (i = 0; i < 1; i += 1) {
-            t.drawCameraScene3((i++) / 3);
+        for (i = 0; i < 8; i += .1) {
+            t.drawCameraScene8(i);
         }
 
     }
-    drawCameraScene4(t) {
-        let pixel_scale = 3;
-
-        let w = new World();
-        let m = new Material(new Color(1, 1, 1), .1, .3, .6, 10, new PatternGradient(new Color(1, .1, .1), new Color(.8, 1, .9)), .6);
-
-        let plane = new Plane(mt.Translation(0, -1, 0));
-        w.shapes.push(plane);
+    drawCameraScene8(t) {
+        let pixel_scale = 4;
 
 
-        for (let i = 0; i < 5; i++) {
-            w.shapes.push(new Sphere(mt.Translation(i * 2 - 7, 1, 10), m));
+        let m = new Material(new Color(.43, .43, .31), .1, .3, .4, 1000);
+        m.transparency = .95;
+        m.reflective = .6;
+        m.refractive_index = .6;
+
+        let groundMat = new Material(new Color(0, 0, 0), 0, .6, .1, 3);
+        groundMat.pattern = new PatternGradient(new Color(.8, .85, .8), new Color(.9, .95, .9));
+        groundMat.pattern = new PatternBlended(new PatternStriped(new Color(.9, .95, .9), new Color(.6, .65, .6)),
+            new PatternStriped(new Color(.9, .95, .9), new Color(.6, .65, .6), mt.Rotation_y(Math.PI / 3)));
+        groundMat.reflective = .2;
+        let plane = new Plane(mt.Translation(0, -1, 0), groundMat);
+        let c = new Cylinder(mt.Translation(0, 2, 0).Scale(2, 2, 2).Rotate_y(Math.PI / 4 * t).Rotate_z(Math.PI / 1.9), m, 0, .25, true);
+        let c2 = new Cylinder(mt.Translation(-6, 2, -5).Scale(2, 2, 2).Rotate_y(Math.PI / 8 * t).Rotate_z(Math.PI / 1.9), m, 0, 1, true);
+        let light = new PointLight(new Color(1, 1, 1).MultipleScalar(2), new Point(3, 4, -3));
+        let w = new World(plane, c, c2, light);
+
+
+        let camera = new Camera(150, 150, Math.PI / 2);
+        //let from = new Point(Math.cos(Math.PI / 8 * t) * 6, 3, Math.sin(Math.PI / 8 * t) * 6);
+        let from = new Point(Math.cos(Math.PI / 8) * 6, 3, Math.sin(Math.PI / 8) * 6);
+        let to = new Point(0, 2, 0);
+        let up = new Vector(0, 1, 0);
+        camera.transform = mt.ViewTransform(from, to, up);
+        camera.Render(w);
+
+        this.RenderCameraCanvas(camera, pixel_scale);
+
+
+    }
+    drawCameraScene7(t) {
+        let pixel_scale = 1;
+
+        let width = 500;
+        let height = 500;
+
+        let maxWorkers = Math.pow(6, 2);
+        this.remainingWorkers = maxWorkers;
+        let rt = this;
+
+        let camera = new Camera(width, height, undefined);
+
+        for (let i = 0; i < maxWorkers; i++) {
+            let worker = new Worker('./js/RenderCameraCanvasParallel.js', { type: "module" });
+
+            worker.postMessage([width, height, i, maxWorkers]);
+            worker.onmessage = function (e) {
+                camera.canvas = e.data;
+                rt.RenderCameraCanvas(camera, pixel_scale, i, maxWorkers);
+                rt.remainingWorkers--;
+                if (rt.remainingWorkers == 0) rt.canvas.saveFrame();
+                rt.canvas.update();
+            }
+
         }
-        let camera = new Camera(250, 250, Math.PI / 2);
-        let from = new Point(0, 3, -3);
+
+    }
+    drawCameraScene6(t) {
+        let pixel_scale = 5;
+
+        let groundMat = new Material(new Color(0, 0, 0), 0, .6, .1, 3);
+        groundMat.pattern = new PatternGradient(new Color(.8, .85, .8), new Color(.9, .95, .9));
+        groundMat.pattern = new PatternBlended(new PatternStriped(new Color(.9, .95, .9), new Color(.6, .65, .6)),
+            new PatternStriped(new Color(.9, .95, .9), new Color(.6, .65, .6), mt.Rotation_y(Math.PI / 3)));
+        groundMat.reflective = .3;
+
+        let walls = [
+            new Plane(mt.Translation(0, 10, 0), new Material(new Color(1, 1, 1), .05, .8, .1, 1, new PatternChecker(new Color(1, 1, 1), new Color(.8, .8, .8), mt.Scaling(.01, .01, .01)))),
+            new Plane(mt.Translation(-10, 0, 0).Rotate_z(Math.PI / 2), new Material(new Color(1, 1, 1), .05, .8, .1, 1, new PatternRing(new Color(1, 1, 1), new Color(.8, .8, .8), mt.Scaling(3, 3, 3)))),
+            new Plane(mt.Translation(0, 0, 10).Rotate_x(Math.PI / 2), new Material(new Color(1, 1, 1), .05, .8, .1, 1, new PatternStriped(new Color(1, .8, .8), new Color(.8, .6, .6), mt.Scaling(3, 3, 3)))),
+            new Plane(mt.Translation(10, 0, 0).Rotate_z(Math.PI / 2), new Material(new Color(1, 1, 1), .05, .8, .1, 1, new PatternStriped(new Color(.8, 1, .8), new Color(.6, .8, .6), mt.Scaling(3, 3, 3)))),
+            new Plane(mt.Translation(0, 0, -10).Rotate_x(Math.PI / 2), new Material(new Color(1, 1, 1), .05, .8, .1, 1, new PatternStriped(new Color(.8, 1, .8), new Color(.6, .6, .8), mt.Scaling(3, 3, 3)))),
+            new Plane(mt.Translation(0, -1, 0), groundMat)
+        ]
+
+        let m = new Material(new Color(.43, .43, .31), .01, .1, .4, 300);
+        m.transparency = .9;
+        m.reflective = 1.1;
+        m.refractive_index = 2.5;
+
+        let s = new Sphere(mt.Translation(0, 2, 0).Scale(2, 2, 2), m);
+        let s2 = new Sphere(mt.Translation(7, 1, 3).Scale(2, 2, 2), m);
+        let s3 = new Sphere(mt.Translation(-4, 0, 3).Scale(1, 3, 1),
+            new Material(new Color(1, 1, .23), .1, .6, .6, 100,
+                new PatternRing(new Color(1, 1, .23), new Color(.23, .23, 1)), .3, .4, .7));
+
+        let light = new PointLight(new Color(1, 1, 1).MultipleScalar(2), new Point(5, 9, -3));
+        let w = new World(s, s2, s3, light, ...walls);
+
+
+        let camera = new Camera(10, 10, Math.PI / 2);
+        let from = new Point(Math.cos(2 * Math.PI * t) * 6, 4, Math.sin(2 * Math.PI * t) * 4);
+        let to = new Point(0, 2, 0);
+        let up = new Vector(0, 1, 0);
+        camera.transform = mt.ViewTransform(from, to, up);
+        //camera.Render(w);
+
+
+        let worker = new Worker('./js/RenderCameraCanvasParallel.js', { type: "module" });
+
+        worker.postMessage([0, 4]);
+
+        let rt = this;
+        worker.onmessage = function (e) {
+            console.log("response from worker");
+            console.log(e.data);
+            camera.canvas = e.data;
+            rt.RenderCameraCanvas(camera, pixel_scale);
+        }
+    }
+    drawCameraScene5(t) {
+        let pixel_scale = 5;
+
+
+        let m = new Material(new Color(.43, .43, .31), .01, .1, .4, 300);
+        m.transparency = .9;
+        m.reflective = 1.1;
+        m.refractive_index = t;
+
+        let groundMat = new Material(new Color(0, 0, 0), 0, .6, .1, 3);
+        groundMat.pattern = new PatternGradient(new Color(.8, .85, .8), new Color(.9, .95, .9));
+        groundMat.pattern = new PatternBlended(new PatternStriped(new Color(.9, .95, .9), new Color(.6, .65, .6)),
+            new PatternStriped(new Color(.9, .95, .9), new Color(.6, .65, .6), mt.Rotation_y(Math.PI / 3)));
+        groundMat.reflective = .9;
+        let plane = new Plane(mt.Translation(0, -1, 0), groundMat);
+        let s = new Sphere(mt.Translation(0, 2, 0).Scale(2, 2, 2), m);
+        let light = new PointLight(new Color(1, 1, 1).MultipleScalar(2), new Point(5, 10, -3));
+        let w = new World(plane, s, light);
+
+
+        let camera = new Camera(100, 100, Math.PI / 2);
+        let from = new Point(0, 4.1, -2);
+        let to = new Point(0, 2, 0);
+        let up = new Vector(0, 1, 0);
+        camera.transform = mt.ViewTransform(from, to, up);
+        camera.Render(w);
+
+        this.RenderCameraCanvas(camera, pixel_scale);
+
+    }
+    drawCameraScene4(t) {
+        let pixel_scale = 1;
+
+
+        let m = new Material(new Color(.97, .87, .23), .1, .3, .3, 10);
+        m.transparency = .9;
+        m.reflective = .9;
+        m.refractive_index = 1.5;
+
+        let m2 = new Material(new Color(1, 1, 1), .01, 0, 0, 100);
+        m2.transparency = .7;
+        m2.reflective = 1;
+        m2.refractive_index = .7;
+
+        let m3 = new Material(new Color(1, 1, 1), .01, 0, 0, 100);
+        m3.transparency = 1;
+        m3.reflective = .9;
+        m3.refractive_index = 2.5;
+
+        let groundMat = new Material(new Color(0, 0, 0), .15, .8, 0, 0);
+        groundMat.pattern = new PatternGradient(new Color(.8, .85, .8), new Color(.9, .95, .9));
+        groundMat.pattern = new PatternBlended(new PatternStriped(new Color(.9, .95, .9), new Color(.6, .65, .6)),
+            new PatternStriped(new Color(.9, .95, .9), new Color(.6, .65, .6), mt.Rotation_y(Math.PI / 3)));
+        groundMat.reflective = .4;
+        let plane = new Plane(mt.Translation(0, -1, 0), groundMat);
+        let s = new Sphere(mt.Translation(0, 1, 0).Scale(2, 2, 2), m);
+        let s3 = new Sphere(mt.Translation(8, 1, 8).Scale(2, 2, 2), new Material());
+        let s2 = new Sphere(mt.Translation(0, 1, -5.9).Scale(1, 1, .1), m2);
+        let s4 = new Sphere(mt.Translation(0, 1, -4 - (t / 10)).Scale(1, 1, .1), m3);
+        let light = new PointLight(new Color(1, 1, 1).MultipleScalar(2), new Point(0, 10, 0));
+        let w = new World(plane, s, s2, s3, s4, light);
+
+
+        let camera = new Camera(500, 500, Math.PI / 2);
+        let from = new Point(0, 1, -6);
         let to = new Point(0, 0, 0);
         let up = new Vector(0, 1, 0);
         camera.transform = mt.ViewTransform(from, to, up);
@@ -139,7 +303,7 @@ class RayTracer {
 
     draw(t) {
         if (this.startTime == undefined) this.startTime = t;
-        if (t - this.startTime < 30) {
+        if (t - this.startTime < this.frameTimeMS) {
             return;
         }
         this.startTime = t;
@@ -482,15 +646,43 @@ class RayTracer {
         this.canvas.saveFrame();
 
     }
-    RenderCameraCanvas(camera, pixel_scale = 1) {
-        this.canvas.startNewFrame();
-        for (let x = 0; x < camera.hsize - 1; x++) {
-            for (let y = 0; y < camera.vsize - 1; y++) {
-                let c = camera.GetPixel(x, y);
-                this.canvas.setPixelRect(x * pixel_scale, y * pixel_scale, pixel_scale, pixel_scale, c);
+    RenderCameraCanvas(camera, pixel_scale = 1, workerNum = undefined, maxWorkers = undefined) {
+        //this.canvas.startNewFrame();
+        if (maxWorkers != undefined && workerNum != undefined) {
+            let area = camera.hsize * camera.vsize;
+            let aspect = camera.hsize / camera.vsize;
+
+            //xy = area/maxWorkers
+            //x/y = aspect
+            //x = y*aspect
+            //y = area/(maxWorkers*y*aspect)
+            //y = sqrt(area/(maxWorkers*aspect))
+
+            let height = Math.sqrt(area / (maxWorkers * aspect));
+            let width = height * aspect;
+
+            let workersPerRow = Math.ceil(camera.hsize / width);
+
+            let xcell = workerNum % workersPerRow;
+            let ycell = Math.floor(workerNum / workersPerRow);
+
+            for (let x = width * xcell; x < width * (xcell + 1); x++) {
+                for (let y = height * ycell; y < height * (ycell + 1); y++) {
+                    let c = camera.GetPixel(x, y);
+                    this.canvas.setPixelRect(x * pixel_scale, y * pixel_scale, pixel_scale, pixel_scale, c);
+                }
             }
+        } else {
+            this.canvas.startNewFrame();
+            for (let x = 0; x < camera.hsize - 1; x++) {
+                for (let y = 0; y < camera.vsize - 1; y++) {
+                    let c = camera.GetPixel(x, y);
+                    this.canvas.setPixelRect(x * pixel_scale, y * pixel_scale, pixel_scale, pixel_scale, c);
+                }
+            }
+            this.canvas.saveFrame();
         }
-        this.canvas.saveFrame();
+        //this.canvas.saveFrame();
     }
 
 

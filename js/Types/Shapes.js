@@ -1,5 +1,5 @@
 export {
-    Shape, Sphere, GlassSphere, Plane, PointLight, Material, PatternStriped,
+    Shape, Sphere, GlassSphere, Plane, Cube, Cylinder, PointLight, Material, PatternStriped,
     PatternGradient, PatternRing, PatternChecker, PatternBlended,
     Camera
 }
@@ -151,6 +151,176 @@ class Plane extends Shape {
     LocalNormalAt(point) {
         return new Vector(0, 1, 0);
     }
+}
+
+class Cube extends Shape {
+    /**
+     * A cube with specified 4x4 transformation matrix; if transform is undefined, it will be an identity matrix
+     * @param {Matrix} transform
+     */
+    constructor(transform, material) {
+        super(transform, material);
+    }
+    /**
+     * Test the intersection of this cube with a ray. Takes a ray that has already been transformed to the object's space.
+     * @param {Ray} ray
+     */
+    LocalIntersect(ray) {
+        let xres = this.CheckAxis(ray.o.x, ray.d.x);
+        let yres = this.CheckAxis(ray.o.y, ray.d.y);
+        let zres = this.CheckAxis(ray.o.z, ray.d.z);
+
+        let xtmin = xres[0];
+        let xtmax = xres[1];
+
+        let ytmin = yres[0];
+        let ytmax = yres[1];
+
+        let ztmin = zres[0];
+        let ztmax = zres[1];
+
+        let tmin = Math.max(xtmin, ytmin, ztmin);
+        let tmax = Math.min(xtmax, ytmax, ztmax);
+
+        if (tmin > tmax) return [];
+
+        return int.Intersections(new Intersection(tmin, this), new Intersection(tmax, this));
+
+    }
+    /**
+     * Helper function for LocalIntersect that calculates the points of intersection on two parallel planes. Origin and 
+     * direction are the compentents of the given point and vector. e.g., origin = ray.origin.x; direction = ray.direction.x 
+     * @param {number} origin 
+     * @param {number} direction 
+     */
+    CheckAxis(origin, direction) {
+        let tmin_numerator = (-1 - origin);
+        let tmax_numerator = (1 - origin);
+        let tmin, tmax;
+
+        if (Math.abs(direction) >= .0001) {
+            tmin = tmin_numerator / direction;
+            tmax = tmax_numerator / direction;
+        } else {
+            tmin = tmin_numerator * Infinity;
+            tmax = tmax_numerator * Infinity;
+        }
+
+        if (tmin > tmax) {
+            let temp = tmin;
+            tmin = tmax;
+            tmax = temp;
+        }
+
+        return [tmin, tmax];
+    }
+    /**
+     * Returns the normal at a given point of that has already been transformed to the object's space. 
+     * @param {Point} point
+     */
+    LocalNormalAt(point) {
+        let maxc = Math.max(Math.abs(point.x), Math.abs(point.y), Math.abs(point.z));
+
+        if (maxc == Math.abs(point.x)) return new Vector(point.x, 0, 0);
+        if (maxc == Math.abs(point.y)) return new Vector(0, point.y, 0);
+        return new Vector(0, 0, point.z);
+    }
+}
+
+class Cylinder extends Shape {
+    /**
+     * A cylinder with specified 4x4 transformation matrix; if transform is undefined, it will be an identity matrix; min and max refer to coordinates on the
+     * y-axis in object space of the bottom and top of the cylinder
+
+     * @param {Matrix} transform
+     * @param {Material} material
+     * @param {number} min
+     * @param {number} max
+     */
+    constructor(transform, material, min = -Infinity, max = Infinity, closed = false) {
+        super(transform, material);
+        this.minimum = min;
+        this.maximum = max;
+        this.closed = closed;
+    }
+    /**
+     * Test the intersection of this cylinder with a ray. Takes a ray that has already been transformed to the object's space.
+     * @param {Ray} ray
+     */
+    LocalIntersect(r) {
+        let a = r.d.x * r.d.x + r.d.z * r.d.z;
+        let xs = [];
+
+        if (Math.abs(a) > .0001) {
+
+            let b = 2 * r.o.x * r.d.x + 2 * r.o.z * r.d.z;
+            let c = r.o.x * r.o.x + r.o.z * r.o.z - 1;
+            let disc = b * b - 4 * a * c;
+
+            if (disc < 0) return [];
+
+            let t0 = (-b - Math.sqrt(disc)) / (2 * a);
+            let t1 = (-b + Math.sqrt(disc)) / (2 * a);
+
+            if (t0 > t1) {
+                let temp = t0;
+                t0 = t1;
+                t1 = temp;
+            }
+
+
+
+            let y0 = r.o.y + t0 * r.d.y;
+            if (this.minimum < y0 & y0 < this.maximum) xs.push(new Intersection(t0, this));
+
+            let y1 = r.o.y + t1 * r.d.y;
+            if (this.minimum < y1 & y1 < this.maximum) xs.push(new Intersection(t1, this));
+        }
+        xs = this.IntersectCaps(r, xs);
+
+
+        return int.Intersections(...xs);
+
+    }
+    /**
+     * Returns the normal at a given point of that has already been transformed to the object's space. 
+     * @param {Point} point
+     */
+    LocalNormalAt(point) {
+        let dist = point.x * point.x + point.z * point.z;
+
+        if (dist < 1 && point.y >= this.maximum - 0.000001) return new Vector(0, 1, 0);
+        else if (dist < 1 && point.y <= this.minimum + .000001) return new Vector(0, -1, 0);
+        return new Vector(point.x, 0, point.z);
+    }
+    /**
+     * return true if intersection at t is within radius of 1 of y axis (circle)
+     * @param {Ray} ray
+     * @param {number} t
+     */
+    CheckCap(ray, t) {
+        let x = ray.o.x + t * ray.d.x;
+        let z = ray.o.z + t * ray.d.z;
+        return (x * x + z * z) <= 1;
+    }
+    /**
+     * Takes an array of intersections and adds any cap intersections to it
+     * @param {Ray} ray
+     * @param {Intersections} xs
+     */
+    IntersectCaps(ray, xs) {
+        if (!this.closed || Math.abs(ray.d.y) < .00001) return xs;
+
+        let t = (this.minimum - ray.o.y) / ray.d.y;
+        if (this.CheckCap(ray, t)) xs.push(new Intersection(t, this));
+
+        t = (this.maximum - ray.o.y) / ray.d.y;
+        if (this.CheckCap(ray, t)) xs.push(new Intersection(t, this));
+
+        return xs;
+    }
+
+
 }
 
 class PointLight {
@@ -413,10 +583,12 @@ class Camera {
      * @param {World} world
      * @param {number} samples
      */
-    Render(world, samples = 0) {
-        for (let y = 0; y < this.vsize - 1; y++) {
-            for (let x = 0; x < this.hsize - 1; x++) {
-                let sampleDist = .75;
+    Render(world, samples = 0, xmin = 0, xmax = undefined, ymin = 0, ymax = undefined) {
+        if (xmax == undefined) xmax = this.hsize - 1;
+        if (ymax == undefined) ymax = this.vsize - 1;
+        for (let y = ymin; y < ymax; y++) {
+            for (let x = xmin; x < xmax; x++) {
+                let sampleDist = .5;
                 let color = so.ColorAt(world, this.RayForPixel(x, y));
                 let sampleWeight = 1;
                 for (let n = 0; n < samples; n++) {
@@ -434,6 +606,7 @@ class Camera {
         }
         return this.canvas;
     }
+
     /**
      * Renders the given World object and returns a 1-dimensional array of length hsize*vsize 
      * filled with Color objects for each pixel. Can specify number of samples, which are computed 

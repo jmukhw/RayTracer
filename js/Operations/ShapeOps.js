@@ -1,4 +1,4 @@
-export { Reflect, Lighting, ShadeHit, ColorAt, ReflectedColor, IsShadowed, SoftShadowAmount }
+export { Reflect, Lighting, RefractedColor, Schlick, ShadeHit, ColorAt, ReflectedColor, IsShadowed, SoftShadowAmount }
 
 import { Touple, Point, Vector, Ray, IntersectionComputations } from "../Types/Touple.js"
 import { Color } from "../Types/Color.js"
@@ -6,6 +6,7 @@ import { Matrix } from "../Types/Matrix.js"
 import { MultiplyColors, ScalarMultiply, Add, Smoothstep } from "./MatrixOps.js"
 import { Hit } from "./Intersections.js"
 import * as mt from "./MatrixTrans.js"
+import { Shape } from "../Types/Shapes.js"
 
 /**
  * Reflects vector 'in' about vector 'normal' and returns it.
@@ -59,6 +60,7 @@ function Lighting(material, shape, light, point, eyev, normalv, amt_shadowed = 0
     specular = specular.MultipleScalar(1 - amt_shadowed);
 
     let c = Add(Add(ambient, diffuse), specular);
+    //c = c.MultipleScalar(1 - material.transparency);
     return c;
 }
 
@@ -70,8 +72,42 @@ function Lighting(material, shape, light, point, eyev, normalv, amt_shadowed = 0
  * @return {Color}
  */
 function RefractedColor(world, comps, remaining = 5) {
-
+    if (comps.object.material.transparency == 0 || remaining == 0) {
+        return new Color(0, 0, 0);
+    }
+    let n_ratio = comps.n1 / comps.n2;
+    let cos_i = comps.eyev.Dot(comps.normalv);
+    let sin2_t = n_ratio * n_ratio * (1 - cos_i * cos_i);
+    if (sin2_t > 1) return new Color(0, 0, 0);
+    let cos_t = Math.sqrt(1 - sin2_t);
+    let direction = comps.normalv.Premultiply(n_ratio * cos_i - cos_t).Subtract(comps.eyev.Premultiply(n_ratio));
+    direction = comps.normalv.Premultiply(n_ratio * cos_i - cos_t).Subtract(comps.eyev.Premultiply(n_ratio));
+    let refracted_ray = new Ray(comps.under_point, direction);
+    let c = ColorAt(world, refracted_ray, remaining - 1).MultipleScalar(comps.object.material.transparency);
+    return c;
 }
+
+/**
+ * Implements Schlick's approximation for the Fresnel effect
+ * @param {IntersectionComputations} comps
+ * @return {number}
+ */
+function Schlick(comps) {
+    let cos = comps.eyev.Dot(comps.normalv);
+    if (comps.n1 > comps.n2) {
+        let n = comps.n1 / comps.n2;
+        let sin2_t = n * n * (1 - cos * cos);
+        if (sin2_t > 1) return 1;
+
+        let cos_t = Math.sqrt(1 - sin2_t);
+
+        cos = cos_t;
+    }
+
+    let r0 = Math.pow((comps.n1 - comps.n2) / (comps.n1 + comps.n2), 2);
+    return r0 + (1 - r0) * Math.pow(1 - cos, 5);
+}
+
 
 /**
  * Calculates the lighting at a given point with the number of reflections remaining
@@ -87,10 +123,20 @@ function ShadeHit(world, comps, remaining = 5) {
         //let shadowed = SoftShadowAmount(world, comps.over_point, world.lights[i]);
 
         let l = Lighting(comps.object.material, comps.object, world.lights[i], comps.point, comps.eyev, comps.normalv, shadowed);
-        let reflected = ReflectedColor(world, comps, remaining);
-
         c = c.Add(l);
+    }
+    let reflected = ReflectedColor(world, comps, remaining);
+    let refracted = RefractedColor(world, comps, remaining);
+
+    let m = comps.object.material;
+    if (m.reflective > 0 && m.transparency > 0) {
+        let reflectance = Schlick(comps);
+
+        c = c.Add(reflected.MultipleScalar(reflectance));
+        c = c.Add(refracted.MultipleScalar(1 - reflectance));
+    } else {
         c = c.Add(reflected);
+        c = c.Add(refracted);
     }
     return c;
 }
@@ -105,7 +151,7 @@ function ColorAt(world, ray, remaining = 5) {
     let xs = world.Intersect(ray);
     let hit = Hit(xs);
     if (hit == undefined) return new Color(0, 0, 0);
-    let comps = hit.getComputations(ray);
+    let comps = hit.getComputations(ray, xs);
     return ShadeHit(world, comps, remaining);
 
 }
@@ -145,7 +191,11 @@ function IsShadowed(world, point, light) {
     let intersections = world.Intersect(r);
     let h = Hit(intersections);
     if (h == undefined) return 0;
-    if (h.t < distance) return 1;
+    //if (h.t < distance) return 1;
+    if (h.t < distance) {
+        return 1 - h.object.material.transparency;
+    }
+    //return 1;
     return 0;
 }
 
